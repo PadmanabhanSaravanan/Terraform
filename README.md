@@ -985,7 +985,7 @@ variable "instance_type" {
 }
 ```
 
-We can do the same for many other values used throughout our configuration to make it more flexible. click on the [link]() for examples.
+We can do the same for many other values used throughout our configuration to make it more flexible. click on the [link](https://github.com/PadmanabhanSaravanan/Terraform/blob/Terraform-v1/Variables%20%26%20Outputs/variables.tf) for examples.
 
 After defining the variables, we then reference them within the resource configuration using **var.VARIABLE_NAME**:
 
