@@ -892,6 +892,71 @@ Run **terraform destroy** to clean up the resources and avoid incurring addition
 
 ### **Variables and Outputs Theory**
 
+Terraform variables and outputs enable more flexible and modular code by breaking out hard-coded values.
+
+* [**Types of Variables**](#types-of-variables)
+* [**Setting Input Variables**](#setting-input-variables)
+* [**Variable Value Types**](#variable-value-types)
+* [**Handling Sensitive Data**](#handling-sensitive-data)
+
+#### **Types of Variables**
+
+**1.** **Input Variables** : Input variables are like input parameters or arguments for a function. They are referenced using var.name. To declare an input variable, use the following syntax:
+
+```markdown
+variable "instance_type" {
+  type = string
+  default = "t2.micro"
+}
+```
+
+**2.** **Local Variables** : Local variables are like temporary variables within the scope of a function. They are referenced using local.name, and declared with locals (plural). For example:
+
+```markdown
+locals {
+  service_name = "example-service"
+  owner = "your_name"
+}
+```
+
+**3.** **Output Variables** : Output variables are like the return values of a function. They allow bundling multiple Terraform configurations together. To declare an output variable, use the following syntax:
+
+```markdown
+output "instance_ip" {
+  value = aws_instance.example.public_ip
+}
+```
+
+#### **Setting Input Variables**
+
+Input variables can be set in several ways, ranked in order of precedence from lowest to highest:
+
+1. **Terraform CLI prompts** : If you don't specify a variable anywhere and there's no default value, the Terraform CLI will prompt you for a value.
+2. **Default value in the block** : You can specify a default value when declaring the variable.
+3. **Environment variables** : Use the prefix **TF_VAR_** followed by the variable name.
+4. **Terraform .tfvars files** : Store values in **.tfvars** files.
+5. **Auto-applied .auto.tfvars files** : These files will be applied over the **.tfvars** files.
+6. **-var or -var-file options** : Pass values when issuing the terraform plan or terraform apply commands.
+
+#### **Variable Value Types**
+
+Variables can hold different value types:
+
+* **Primitive types**: string, number, or boolean.
+* **Complex types**: lists, sets, maps, etc.
+
+Type checking happens automatically in Terraform. You can also write your own validation rules.
+
+#### **Handling Sensitive Data**
+
+When using sensitive data in variables, like a database password, add the **sensitive = true** attribute when defining the variable. This will cause those data to be masked in the Terraform plan output to prevent leaking credentials.
+
+Also, avoid storing sensitive data in files, and consider using these options for passing in those data:
+
+* environment Variables
+* -var command
+* external secret stores like AWS Secrets Manager or HashiCorp Vault.
+
 ### **Variables and Outputs Applied**
 
 ## **Additional HCL Features**
