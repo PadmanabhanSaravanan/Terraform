@@ -349,7 +349,7 @@ This command performs several different initialization steps in order to prepare
 
 The following is an example of a "**.tfstate**" file for a terraform config managing an s3 bucket:
 
-```json
+```markdown
 {
   "version": 4,
   "terraform_version": "1.0.0",
@@ -473,7 +473,7 @@ To use Terraform Cloud from the command line, you must log in. Logging in allows
 
 * Specify a backend type of "remote" with organization and workspace names in the Terraform configuration
 
-```json
+```markdown
 terraform {
   backend "remote"{
     organization = "organization-name"
@@ -521,7 +521,7 @@ Free up to five users within an organization, but costs $20 per user per month f
 
 ![image aws-s3](image/AWS-S3.PNG)
 
-```json
+```markdown
 terraform {
  backend "s3" {
     bucket         = "devops-directive-tf-state-bucket"
@@ -541,7 +541,7 @@ terraform {
 * Update the Terraform configuration to use the remote backend with the S3 bucket and DynamoDB table
 * Re-run `terraform init` to import the state into the new remote backend
 
-```json
+```markdown
 terraform {
    backend "s3" {
      bucket         = "devops-directive-tf-state" # REPLACE WITH YOUR BUCKET NAME
