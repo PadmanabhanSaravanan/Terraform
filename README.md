@@ -139,15 +139,207 @@ Terraform consists of two main components:
 
 ### **Setting up Terraform with AWS**
 
+* [**Installing Terraform**](#installing-terraform)
+* [**Authenticating with AWS**](#authenticating-with-aws)
+* [**Creating a Basic Terraform Configuration**](#creating-a-basic-terraform-configuration)
+
+#### **Installing Terraform**
+
+Installing Terraform on Windows requires you to download the correct Terraform package, unpack, and execute it via the CLI. Follow the instructions below to ensure you do not miss any steps.
+
+To install in Mac or linux system Refere to this [link](https://developer.hashicorp.com/terraform/downloads)
+
+**Step1 : Download Terraform File for Windows**
+`
+1. Browse to the [Download Terraform](https://developer.hashicorp.com/terraform/downloads) page.
+
+2. Select the Windows tab under the Operating System heading. The latest version is preselected.
+
+![image Insatallation](image/install.PNG)
+
+3. Choose the binary to download. Select 386 for 32-bit systems or AMD64 for 64-bit systems. Choose the download location for the zip file if the download does not start automatically.
+
+4. Unzip the downloaded file. For example, use the C:\terraform path. Remember this location so you can add the path to the environment variables.
+
+**Step2 : Add Terraform Path to System Environment Variables**
+
+To add the Terraform executable to the system's global path:
+
+1. Open the start menu, start typing environment and click Edit system environment variables. The System Properties window opens.  
+
+2. Click the Environment Variables... button.
+
+![image Insatallation](image/install1.PNG)
+
+3. Select the Path variable in the System variables section to add terraform for all accounts. Alternatively, select Path in the User variables section to add terraform for the currently logged-in user only. Click Edit once you select a Path.
+
+![image Insatallation](image/install2.PNG)
+
+4. Click New in the edit window and enter the location of the Terraform folder.
+
+![image Insatallation](image/install3.PNG)
+
+5. Click OK on all windows to apply the changes.
+
+**Step3 : Verify Windows Terraform Installation**
+
+To check the Terraform global path configuration:
+
+1. Open a new command-prompt window.
+
+2. Enter the command to check the Terraform version: terraform -version
+
+```markdown
+terraform -version
+```
+
+![image Insatallation](image/install4.PNG)
+
+The output shows the Terraform version you downloaded and installed on your Windows machine.
+
+#### **Authenticating with AWS**
+
+**Step1** : Create a user with the necessary IAM roles for your project. In this example, we used the following permissions:
+
+* RDS access (AmazonRDSFullAccess)
+* EC2 access (AmazonEC2FullAccess)
+* IAM role management (IAMFullAccess)
+* S3 access (AmazonS3FullAccess)
+* DynamoDB access (AmazonDynamoDBFullAccess)
+* Route 53 access (AmazonRoute53FullAccess)
+
+![image Insatallation](image/install5.PNG)
+
+![image Insatallation](image/install6.PNG)
+
+**Step2** Install the AWS Command Line Interface (CLI) by following the instructions on the [AWS CLI installation page](https://aws.amazon.com/cli/).
+
+if you facing the below error text click on the [link](image/install7.PNG)
+
+```markdown
+$ aws --version
+command not found: aws
+```
+
+**Step3** Run aws configure and enter your access key ID, secret access key, and default region.
+
+```markdown
+aws configure
+```
+
+![image Insatallation](image/install8.PNG)
+
+This will create a credentials file in your home directory at `~/.aws/credentials`.
+
+#### **Creating a Basic Terraform Configuration**
+
+**Step1.** Create a file named main.tf with the following content:
+
+```markdown
+terraform {
+  required_providers {
+    aws = {
+      source  = "hashicorp/aws"
+      version = "~> 3.0"
+    }
+  }
+}
+
+provider "aws" {
+  region = "us-east-1"
+}
+
+resource "aws_instance" "example" {
+  ami           = "ami-011899242bb902164" # Ubuntu 20.04 LTS // us-east-1
+  instance_type = "t2.micro"
+}
+```
+
+**Step2.** This basic configuration specifies the AWS provider and an EC2 instance resource using an Ubuntu 20.04 AMI and the t2.micro instance type.
+
+**Using Terraform Commands:**
+
+* Initialize Terraform in the directory containing main.tf by running `terraform init`. This sets up the backend and state storage.
+
+![image Insatallation](image/install9.PNG)
+
+* Run `terraform plan` to view the changes Terraform will make to your infrastructure.
+
+![image Insatallation](image/install10.PNG)
+
+* Run `terraform apply` to create the specified resources. Confirm the action when prompted.
+
+![image Insatallation](image/install11.PNG)
+
+![image Insatallation](image/install12.PNG)
+
+* To clean up resources and avoid unnecessary costs, run `terraform destroy` and confirm the action when prompted.
+
+![image Insatallation](image/install13.PNG)
+
+By following these steps, you have installed Terraform, authenticated with AWS, and created a basic configuration to provision a virtual machine on AWS!
+
 ## **Basic Terraform Usage** 
 
-* [**Terraform Providers + Init**](#terraform-providers-init) <!-- style="font-size:20px" -->
+* [**Terraform Providers + Init**](#terraform-providers-+-init) <!-- style="font-size:20px" -->
 * [**Terraform State Management**](#terraform-state-management) <!-- style="font-size:20px" -->
 * [**Terraform Plan, Apply, Destroy**](#terraform-plan-apply-destroy) <!-- style="font-size:20px" -->
 * [**Remote Backend Considerations**](#remote-backend-considerations) <!-- style="font-size:20px" -->
 * [**Sample Application Walkthrough**](#sample-application-walkthrough) <!-- style="font-size:20px" -->
 
-### **Terraform Providers Init**
+### **Terraform Providers + Init**
+
+**The General Sequence of Terraform Commands:**
+
+**1.** **terraform init**: Initializes your project
+
+**2.** **terraform plan**: Checks your configuration against the current state and generates a plan
+
+**3.** **terraform apply**: Applies the plan to create or update your infrastructure
+
+**4.** **terraform destroy**: Removes resources when no longer needed
+
+<br>
+
+* [**Terraform Providers**](#terraform-providers)
+* [**Terraform Init Command**](#terraform-init-command)
+
+#### **Terraform Providers** 
+
+A provider is a plugin that lets Terraform manage an external API
+
+Provider plugins like the AWS provider or the cloud-init provider act as a translation layer that allows Terraform to communicate with many different cloud providers, databases, and services.
+
+![images Terraform-provider](image/provider.png)
+
+* Visit [registry.terraform.io](https://registry.terraform.io/) to explore available providers
+* Official providers have the "official" tag and are maintained by the respective cloud service
+* In your configuration file, specify required providers and pin their versions within a terraform block
+
+Example:
+
+```markdown
+required_providers {
+    aws = {
+      source  = "hashicorp/aws"
+      version = "~> 3.0"
+    }
+  }
+```
+
+#### **Terraform Init Command**
+
+This command performs several different initialization steps in order to prepare the current working directory for use with Terraform
+
+* In an empty working directory, create a "**main.tf**" file containing your configuration
+
+* Run `terraform init` to download the necessary providers and store them in the  "**.terraform**" directory. The  "**.terraform.lock.hcl**" file contains information about the installed dependencies and providers
+
+![image Insatallation](image/install9.PNG)
+
+* Modules, reusable Terraform code bundles, are also downloaded and stored in the "**.terraform**" directory.
+
+![images Terraform-init](image/init1.png)
 
 ### **Terraform State Management**
 
