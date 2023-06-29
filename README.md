@@ -283,7 +283,7 @@ By following these steps, you have installed Terraform, authenticated with AWS, 
 
 * [**Terraform Providers + Init**](#terraform-providers-+-init) <!-- style="font-size:20px" -->
 * [**Terraform State Management**](#terraform-state-management) <!-- style="font-size:20px" -->
-* [**Terraform Plan, Apply, Destroy**](#terraform-plan-apply-destroy) <!-- style="font-size:20px" -->
+* [**Terraform Plan,Apply & Destroy**](#terraform-plan,apply-&-destroy) <!-- style="font-size:20px" -->
 * [**Remote Backend Considerations**](#remote-backend-considerations) <!-- style="font-size:20px" -->
 * [**Sample Application Walkthrough**](#sample-application-walkthrough) <!-- style="font-size:20px" -->
 
@@ -423,7 +423,35 @@ Terraform stores state about managed infrastructure to map real-world resources 
 * Terraform Cloud (managed offering)
 * Self-managed remote backends (e.g., Amazon S3, Google Cloud Storage)
 
-### **Terraform Plan Apply Destroy**
+### **Terraform Plan,Apply & Destroy**
+
+* [**Terraform Plan Command**](#terraform-apply-command)
+* [**Terraform Apply Command**](#terraform-apply-command)
+* [**Terraform Destroy Command**](#terraform-destroy-command)
+
+#### **Terraform Plan Command**
+
+* Compares the desired state (Terraform configuration) with the actual state (Terraform state file)
+* Identifies any discrepancies between the two states
+* Outputs the differences and the actions needed to reconcile the states
+
+![image plan](image/plan.png)
+
+#### **Terraform Apply Command**
+
+* Executes the actions identified in the Terraform Plan command
+* Creates, modifies, or deletes resources as needed to match the desired state
+* Updates the Terraform state file to reflect the changes
+
+![image apply](image/apply.png)
+
+#### **Terraform Destroy Command**
+
+* Removes all resources associated with the Terraform configuration
+* Use with caution, as it permanently deletes resources
+* Typically used to clean up resources at the end of a project or example
+
+![image destroy](image/destroy.png)
 
 ### **Remote Backend Considerations**
 
