@@ -275,7 +275,7 @@ resource "aws_instance" "example" {
 
 * To clean up resources and avoid unnecessary costs, run `terraform destroy` and confirm the action when prompted.
 
-![image Insatallation](image/install13.PNG)
+![image Insatallation](image/install13.png)
 
 By following these steps, you have installed Terraform, authenticated with AWS, and created a basic configuration to provision a virtual machine on AWS!
 
