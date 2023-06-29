@@ -455,6 +455,146 @@ Terraform stores state about managed infrastructure to map real-world resources 
 
 ### **Remote Backend Considerations**
 
+* [**Terraform Cloud**](#terraform-cloud)
+* [**Self-managed Backend (AWS S3)**](#self-managed-backend-aws-s3)
+* [**Bootstrapping Process for AWS S3 Backend**](#bootstrapping-process-for-aws-s3-backend)
+
+#### **Terraform Cloud**
+
+* A managed offering from HashiCorp
+
+Terraform Cloud runs Terraform operations and stores state remotely, so you can use Terraform without worrying about the stability of your local machine, or the security of your state file.
+
+To use Terraform Cloud from the command line, you must log in. Logging in allows you to trigger remote plans and runs, migrate state to the cloud, and perform other remote operations on configurations with Terraform Cloud.
+
+**Step1** Click the [link](https://app.terraform.io/) to create a account in Terraform Cloud.
+
+**Step2** Configure terraform main.tf 
+
+* Specify a backend type of "remote" with organization and workspace names in the Terraform configuration
+
+```json
+terraform {
+  backend "remote"{
+    organization = "organization-name"
+
+    workspaces{
+      name = "workspace-name"
+    }
+  }
+}
+```
+
+**Step3** In order to authenticate with Terraform Cloud, run the `terraform login` subcommand. Respond yes to the prompt to confirm that you want to authenticate.
+
+![image token](image/terraformlogin2.png)
+
+**Step4** Generate a token
+
+* A browser window will automatically open to the Terraform Cloud login screen. Enter a token name in the web UI, or leave the default name, terraform login
+
+![image token](image/terraformlogin.png)
+
+* Click Create API token to generate the authentication token.
+
+![image token](image/terraformlogin1.png)
+
+* Save a copy of the token in a secure location. It provides access to your Terraform Cloud organization. Terraform will also store your token locally at the file path specified in the command output.
+
+**Step5** Add the token to the CLI
+
+* When the Terraform CLI prompts you, paste the user token exactly once into your terminal. Terraform will hide the token for security when you paste it into your terminal. Press Enter to complete the authentication process.
+
+![image token](image/terraformlogin3.png)
+
+**Web UI allows you to interact with your account, organization, and workspaces**
+
+![image token](image/terraform-cloud1.png)
+
+Free up to five users within an organization, but costs $20 per user per month for more than five users
+
+#### **Self-managed Backend AWS S3**
+
+* Specify an S3 bucket and a DynamoDB table in the Terraform configuration
+* S3 bucket stores the state file, while the DynamoDB table prevents multiple concurrent apply commands
+* Requires a bootstrapping process to provision the S3 bucket and DynamoDB table
+
+![image aws-s3](image/AWS-S3.PNG)
+
+```json
+terraform {
+ backend "s3" {
+    bucket         = "devops-directive-tf-state-bucket"
+    key            = "aws-example/terraform.tfstate" #set as per you file structure
+    region         = "us-east-1"
+    dynamodb_table = "terraform-state-locking"
+    encrypt        = true
+  }
+}
+```
+
+#### **Bootstrapping Process for AWS S3 Backend**
+
+* Create a Terraform configuration without a remote backend (defaults to a local backend)
+* Define the necessary AWS resources: S3 bucket and DynamoDB table with a hash key named **"LockID"**
+* Run `terraform apply` to create the S3 bucket and DynamoDB table
+* Update the Terraform configuration to use the remote backend with the S3 bucket and DynamoDB table
+* Re-run `terraform init` to import the state into the new remote backend
+
+```json
+terraform {
+   backend "s3" {
+     bucket         = "devops-directive-tf-state" # REPLACE WITH YOUR BUCKET NAME
+     key            = "aws-example/terraform.tfstate" #set as per you file structure
+     region         = "us-east-1"
+     dynamodb_table = "terraform-state-locking"
+     encrypt        = true
+   }
+
+  required_providers {
+    aws = {
+      source  = "hashicorp/aws"
+      version = "~> 3.0"
+    }
+  }
+}
+
+provider "aws" {
+  region = "us-east-1"
+}
+
+resource "aws_s3_bucket" "terraform_state" {
+  bucket        = "devops-directive-tf-state" # REPLACE WITH YOUR BUCKET NAME
+  force_destroy = true
+}
+
+resource "aws_s3_bucket_versioning" "terraform_bucket_versioning" {
+  bucket = aws_s3_bucket.terraform_state.id
+  versioning_configuration {
+    status = "Enabled"
+  }
+}
+
+resource "aws_s3_bucket_server_side_encryption_configuration" "terraform_state_crypto_conf" {
+  bucket        = aws_s3_bucket.terraform_state.bucket
+  rule {
+    apply_server_side_encryption_by_default {
+      sse_algorithm = "AES256"
+    }
+  }
+}
+
+resource "aws_dynamodb_table" "terraform_locks" {
+  name         = "terraform-state-locking"
+  billing_mode = "PAY_PER_REQUEST"
+  hash_key     = "LockID"
+  attribute {
+    name = "LockID"
+    type = "S"
+  }
+}
+```
+
 ### **Sample Application Walkthrough**
 
 ## **Variables and Outputs**
