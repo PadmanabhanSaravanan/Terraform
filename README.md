@@ -1188,17 +1188,42 @@ The diagram below represents various types of provisioners you can implement usi
 The local-exec provisioner works on the Terraform host – where Terraform configuration is applied/executed. It is used to execute any shell command. It is used to set or read environment variables, details about the resource which is created, invoke any process or application, etc.
 
 ```markdown
+# main.tf
+
+terraform {
+  required_providers {
+    aws = {
+      source  = "hashicorp/aws"
+      version = "~> 3.0"
+    }
+  }
+}
+
+provider "aws" {
+  region = "us-east-1"
+}
+
 resource "aws_instance" "my_vm" {
- ami           = var.ami //Amazon Linux AMI
- instance_type = var.instance_type
+    ami           = var.ami //Amazon Linux AMI
+    instance_type = var.instance_type
  
- provisioner "local-exec" {
-   command = "echo ${self.private_ip} >> private_ip.txt"
- }
- 
- tags = {
-   Name = var.name_tag,
- }
+    provisioner "local-exec" {
+        command = "echo ${self.private_ip} >> private_ip.txt"
+    }
+
+}
+
+# variables.tf
+variable "ami" {
+  description = "Amazon machine image to use for ec2 instance"
+  type        = string
+  default     = "ami-011899242bb902164" # Ubuntu 20.04 LTS // us-east-1
+}
+
+variable "instance_type" {
+  description = "ec2 instance type"
+  type        = string
+  default     = "t2.micro"
 }
 ```
 
@@ -1220,29 +1245,81 @@ To demonstrate this, we have a file named “letsdotech.txt” which we would li
 
 Terraform configuration for the EC2 instance along with file provisioner looks like below. Various attributes are described in the table that follows.
 
+Download Key pair value save in the folder
+
 ```markdown
+# main.tf
+terraform {
+  required_providers {
+    aws = {
+      source  = "hashicorp/aws"
+      version = "~> 3.0"
+    }
+  }
+}
+
+provider "aws" {
+  region = "us-east-1"
+}
+
 resource "aws_instance" "my_vm" {
- ami           = var.ami //Amazon Linux AMI
- instance_type = var.instance_type
+    ami           = var.ami //Amazon Linux AMI
+    instance_type = var.instance_type
+    key_name = "aws_key"
+    vpc_security_group_ids = ["${aws_security_group.webSG.id}"]
  
- key_name        = "tfsn"
- security_groups = [aws_security_group.http_access.name]
- 
- provisioner "file" {
-   source      = "./letsdotech.txt"
-   destination = "/home/ec2-user/letsdotech.txt"
- }
- connection {
-   type        = "ssh"
-   host        = self.public_ip
-   user        = "ec2-user"
-   private_key = file("./tfsn.cer")
-   timeout     = "4m"
- }
- 
- tags = {
-   Name = var.name_tag,
- }
+    provisioner "file" {
+        source      = "letsdotech.txt"
+        destination = "/home/ubuntu/letsdotech.txt"
+        }
+
+    connection {
+        type        = "ssh"
+        host        = self.public_ip
+        user        = "ubuntu"
+        private_key = file("aws_key.pem")
+        timeout     = "4m"
+        }
+}
+
+resource "aws_security_group" "webSG" {
+  name        = "webSG"
+  description = "Allow ssh  inbound traffic"
+
+  ingress {
+    from_port   = 22
+    to_port     = 22
+    protocol    = "tcp"
+    cidr_blocks = ["0.0.0.0/0"]
+  }
+
+  ingress {
+    from_port   = 80
+    to_port     = 80
+    protocol    = "tcp"
+    cidr_blocks = ["0.0.0.0/0"]
+  }
+
+  egress {
+    from_port       = 0
+    to_port         = 0
+    protocol        = "-1"
+    cidr_blocks     = ["0.0.0.0/0"]
+    
+  }
+}
+
+# variables.tf
+variable "ami" {
+  description = "Amazon machine image to use for ec2 instance"
+  type        = string
+  default     = "ami-011899242bb902164" # Ubuntu 20.04 LTS // us-east-1
+}
+
+variable "instance_type" {
+  description = "ec2 instance type"
+  type        = string
+  default     = "t2.micro"
 }
 ```
 
@@ -1259,31 +1336,79 @@ The remote-exec provisioners are similar to local-exec provisioners – where th
 We use a remote-exec provisioner to run a single command or multiple commands. The example below performs a simple task on the EC2 instance that is created by Terraform. Once the EC2 instance creation is successful, Terraform’s remote-exec provisioner logs in to the instance via SSH and executes the commands specified in the inline attribute array.
 
 ```markdown
+# main.tf
+terraform {
+  required_providers {
+    aws = {
+      source  = "hashicorp/aws"
+      version = "~> 3.0"
+    }
+  }
+}
+
+provider "aws" {
+  region = "us-east-1"
+}
+
 resource "aws_instance" "my_vm" {
- ami           = var.ami //Amazon Linux AMI
- instance_type = var.instance_type
+    ami           = var.ami //Amazon Linux AMI
+    instance_type = var.instance_type
+    key_name = "aws_key"
+    vpc_security_group_ids = ["${aws_security_group.webSG.id}"]
  
- key_name        = "tfsn"
- security_groups = [aws_security_group.http_access.name]
- 
- provisioner "remote-exec" {
+   provisioner "remote-exec" {
    inline = [
      "touch hello.txt",
      "echo 'Have a great day!' >> hello.txt"
    ]
  }
- 
- connection {
-   type        = "ssh"
-   host        = self.public_ip
-   user        = "ec2-user"
-   private_key = file("./tfsn.cer")
-   timeout     = "4m"
- }
- 
- tags = {
-   Name = var.name_tag,
- }
+
+    connection {
+        type        = "ssh"
+        host        = self.public_ip
+        user        = "ubuntu"
+        private_key = file("aws_key.pem")
+        timeout     = "4m"
+        }
+}
+
+resource "aws_security_group" "webSG" {
+  name        = "webSG"
+  description = "Allow ssh  inbound traffic"
+
+  ingress {
+    from_port   = 22
+    to_port     = 22
+    protocol    = "tcp"
+    cidr_blocks = ["0.0.0.0/0"]
+  }
+
+  ingress {
+    from_port   = 80
+    to_port     = 80
+    protocol    = "tcp"
+    cidr_blocks = ["0.0.0.0/0"]
+  }
+
+  egress {
+    from_port       = 0
+    to_port         = 0
+    protocol        = "-1"
+    cidr_blocks     = ["0.0.0.0/0"]
+    
+  }
+}
+# variables.tf
+variable "ami" {
+  description = "Amazon machine image to use for ec2 instance"
+  type        = string
+  default     = "ami-011899242bb902164" # Ubuntu 20.04 LTS // us-east-1
+}
+
+variable "instance_type" {
+  description = "ec2 instance type"
+  type        = string
+  default     = "t2.micro"
 }
 ```
 
