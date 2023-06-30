@@ -910,6 +910,8 @@ variable "instance_type" {
 }
 ```
 
+You can find more information in the [Terraform documentation](https://developer.hashicorp.com/terraform/language/values/variables)
+
 **2.** **Local Variables** : Local variables are like temporary variables within the scope of a function. They are referenced using local.name, and declared with locals (plural). For example:
 
 ```markdown
@@ -919,6 +921,8 @@ locals {
 }
 ```
 
+You can find more information in the [Terraform documentation](https://developer.hashicorp.com/terraform/language/values/locals)
+
 **3.** **Output Variables** : Output variables are like the return values of a function. They allow bundling multiple Terraform configurations together. To declare an output variable, use the following syntax:
 
 ```markdown
@@ -926,6 +930,8 @@ output "instance_ip" {
   value = aws_instance.example.public_ip
 }
 ```
+
+You can find more information in the [Terraform documentation](https://developer.hashicorp.com/terraform/language/values/outputs)
 
 #### **Setting Input Variables**
 
@@ -1034,6 +1040,258 @@ Additionally, you can create staging and production environments simply by confi
 Remember not to store sensitive values like passwords in your .tfvars file; instead, pass them at runtime or use an external secrets manager.
 
 ## **Additional HCL Features**
+
+Advanced features of the HashiCorp Configuration Language (HCL) used in Terraform. These features can help make your Terraform code more expressive and modular
+
+* [**Expressions, Operators, and Functions**](#expressions,-operators,-and-functions)
+* [**Meta Arguments**](#meta-arguments)
+* [**Provisioners**](#provisioners)
+
+#### **Expressions, Operators, and Functions**
+
+Terraform provides various expressions, operators, and functions to build dynamic strings, perform arithmetic operations, and use built-in functions.
+
+You can find more information in the [Terraform documentation](https://developer.hashicorp.com/terraform/language/functions)
+
+**Some examples include:**
+
+* **Template strings**: Similar to JavaScript, you can use template strings with curly braces to reference variables within a string.
+* **Operators**: Arithmetic and logical operators like multiplication, division, and checking equality are available.
+* **Conditionals**: Ternary syntax can be used for conditional expressions.
+* **For loops**: for loops can be used to loop over a list of configurations.
+* **Splat expressions**: This expands values in a list.
+* **Functions**: Math functions, date and time functions, and hash/crypto functions can be used in your code.
+
+#### **Meta Arguments**
+
+Terraform provides various meta arguments to control the behavior of resources, such as depends_on, count, for_each, and lifecycle.
+
+You can find more information in the [Terraform documentation](https://developer.hashicorp.com/terraform/language/meta-arguments).
+
+* [**depends_on**](#depends-on)
+* [**count**](#count)
+* [**lifecycle**](#lifecycle)
+
+##### **depends on**
+
+* Terraform automatically generatesdependency graph based on references
+* If two resources depend on each other(but not each others data), depends_onspecifies that dependency to enforce ordering
+* For example, if software on the instance needs access to S3, trying to create the aws_instance would fail if attempting to create it before the aws_iam_role_policy
+
+```markdown
+resource "aws_iam_role" "example" {
+  name = "example"
+
+  # assume_role_policy is omitted for brevity in this example. Refer to the
+  # documentation for aws_iam_role for a complete example.
+  assume_role_policy = "..."
+}
+
+resource "aws_iam_instance_profile" "example" {
+  # Because this expression refers to the role, Terraform can infer
+  # automatically that the role must be created first.
+  role = aws_iam_role.example.name
+}
+
+resource "aws_iam_role_policy" "example" {
+  name   = "example"
+  role   = aws_iam_role.example.name
+  policy = jsonencode({
+    "Statement" = [{
+      # This policy allows software running on the EC2 instance to
+      # access the S3 API.
+      "Action" = "s3:*",
+      "Effect" = "Allow",
+    }],
+  })
+}
+
+resource "aws_instance" "example" {
+  ami           = "ami-a1b2c3d4"
+  instance_type = "t2.micro"
+
+  # Terraform can infer from this that the instance profile must
+  # be created before the EC2 instance.
+  iam_instance_profile = aws_iam_instance_profile.example
+
+  # However, if software running in this EC2 instance needs access
+  # to the S3 API in order to boot properly, there is also a "hidden"
+  # dependency on the aws_iam_role_policy that Terraform cannot
+  # automatically infer, so it must be declared explicitly:
+  depends_on = [
+    aws_iam_role_policy.example
+  ]
+}
+```
+
+##### **count**
+
+Use count to create multiple copies of a resource. This is useful when you have nearly identical resources.
+
+```hcl
+resource "aws_instance" "server" {
+  count = 4 # create four similar EC2 instances
+
+  ami           = "ami-a1b2c3d4"
+  instance_type = "t2.micro"
+
+  tags = {
+    Name = "Server ${count.index}"
+  }
+}
+```
+
+##### **for_each**
+
+The `for_each` meta-argument accepts a map or a set of strings, and creates an instance for each item in that map or set. Each instance has a distinct infrastructure object associated with it, and each is separately created, updated, or destroyed when the configuration is applied.
+
+```markdown
+resource "aws_iam_user" "the-accounts" {
+  for_each = toset( ["Todd", "James", "Alice", "Dottie"] )
+  name     = each.key
+}
+```
+
+##### **lifecycle**
+
+The lifecycle meta argument is used to specify the order in which Terraform takes actions, like creating resources before destroying them, or ignoring changes.
+
+```markdown
+resource "aws_instance" "example" {
+
+  # ...
+
+  lifecycle {
+    create_before_destroy = true
+    ignore_changes = [tags]
+    prevent_destroy = true
+  }
+}
+```
+
+#### **Provisioners**
+
+Provisioning mainly deals with configuration activities that happen after the resource is created. It may involve some file operations, executing CLI commands, or even executing the script. Once the resource is successfully initialized, it is ready to accept connections. These connections help Terraform log into the newly created instance and perform these operations.
+
+For more information, refer to the [Terraform documentation on provisioners](https://developer.hashicorp.com/terraform/language/resources/provisioners/syntax).
+
+The diagram below represents various types of provisioners you can implement using Terraform at various stages of provisioning.
+
+![image provisioner](image/terraform-provisioners-diagram.png)
+
+* [**The local-exec Provisioner**](#the-local-exec-provisioner)
+* [**The File Provisioner**](#the-file-provisioner)
+* [**The remote-exec provisioner**](#the-remote-exec-provisioner)
+
+##### **The local exec Provisioner**
+
+The local-exec provisioner works on the Terraform host – where Terraform configuration is applied/executed. It is used to execute any shell command. It is used to set or read environment variables, details about the resource which is created, invoke any process or application, etc.
+
+```markdown
+resource "aws_instance" "my_vm" {
+ ami           = var.ami //Amazon Linux AMI
+ instance_type = var.instance_type
+ 
+ provisioner "local-exec" {
+   command = "echo ${self.private_ip} >> private_ip.txt"
+ }
+ 
+ tags = {
+   Name = var.name_tag,
+ }
+}
+```
+
+Once this configuration is applied successfully, we find a new file being created in the project directory.
+
+![image](image/terraform-provisioners-create-a-new-file.png)
+
+The contents of the private_ip.txt file are as expected.
+
+![image](image/terraform-provisiones-private_ip.png)
+
+##### **The File Provisioner**
+
+The file provisioner is a way to copy certain files or artifacts from the host machine to target resources that will be created in the future. This is a very handy way to transport certain script files, configuration files, artifacts like .jar files, binaries, etc. when the target resource is created and boots for the first time.
+
+To demonstrate this, we have a file named “letsdotech.txt” which we would like to copy into the home directory of the target EC2 instance. The project directory currently looks like the below. “tfsn.cer” is the private key file we created in the previous section for enabling the Terraform provisioner to SSH into the EC2 instance.
+
+![image](image/terraform-provisioners-tfsn-cer.png)
+
+Terraform configuration for the EC2 instance along with file provisioner looks like below. Various attributes are described in the table that follows.
+
+```markdown
+resource "aws_instance" "my_vm" {
+ ami           = var.ami //Amazon Linux AMI
+ instance_type = var.instance_type
+ 
+ key_name        = "tfsn"
+ security_groups = [aws_security_group.http_access.name]
+ 
+ provisioner "file" {
+   source      = "./letsdotech.txt"
+   destination = "/home/ec2-user/letsdotech.txt"
+ }
+ connection {
+   type        = "ssh"
+   host        = self.public_ip
+   user        = "ec2-user"
+   private_key = file("./tfsn.cer")
+   timeout     = "4m"
+ }
+ 
+ tags = {
+   Name = var.name_tag,
+ }
+}
+```
+
+![image](image/console1.PNG)
+
+Also, let us SSH into the EC2 instance and check if the file exists and the contents of the file.
+
+![image](image/console2.PNG)
+
+##### **The remote exec provisioner**
+
+The remote-exec provisioners are similar to local-exec provisioners – where the commands are executed on the target EC2 instance instead of Terraform host. This is accomplished by using the same connection block that is used by the file provisioner.
+
+We use a remote-exec provisioner to run a single command or multiple commands. The example below performs a simple task on the EC2 instance that is created by Terraform. Once the EC2 instance creation is successful, Terraform’s remote-exec provisioner logs in to the instance via SSH and executes the commands specified in the inline attribute array.
+
+```markdown
+resource "aws_instance" "my_vm" {
+ ami           = var.ami //Amazon Linux AMI
+ instance_type = var.instance_type
+ 
+ key_name        = "tfsn"
+ security_groups = [aws_security_group.http_access.name]
+ 
+ provisioner "remote-exec" {
+   inline = [
+     "touch hello.txt",
+     "echo 'Have a great day!' >> hello.txt"
+   ]
+ }
+ 
+ connection {
+   type        = "ssh"
+   host        = self.public_ip
+   user        = "ec2-user"
+   private_key = file("./tfsn.cer")
+   timeout     = "4m"
+ }
+ 
+ tags = {
+   Name = var.name_tag,
+ }
+}
+```
+
+![image](image/console3.PNG)
+
+As a result, when we log into the same EC2 instance, we should have a file named “hello.txt” with a message “Have a great day!” in its contents. Let us verify the same.
+
+![image](image/console4.PNG)
 
 ## **Terraform Modules**
 
