@@ -1425,7 +1425,170 @@ As a result, when we log into the same EC2 instance, we should have a file named
 
 ### **Terraform Modules Theory**
 
+**What is a Module?**
+
+* A module is a container for multiple resources defined within your Terraform configuration, bundled in a reusable fashion.
+* Modules consist of a collection of .tf or .tf.json files kept together within a single directory
+
+**Why use Modules?**
+
+* Breaking down the system into different components allows for better organization and specialization within a team.
+* By using modules, infrastructure specialists can define best practices for infrastructure deployment, which can then be consumed by application developers without having to learn the intricacies of Terraform.
+
+![image module](image/module.PNG)
+
+**Types of Modules**
+
+* **Root Module** : The default module consisting of every .tf file in the main working directory.
+* **Child Module** : A separate module referenced from the root module.
+
+**Modules Sources**
+
+* **Local Path** : Reference a module using a relative path.
+
+  ```markdown
+  module "web-app" {
+  source = "../web-app"
+  }
+  ```
+
+* **Terraform Registry** : Reference a module from the Terraform registry.
+
+  ```markdown
+  module "consul" {
+  source = "hashicorp/consul/aws"
+  version = "0.1.0
+  }
+  ```
+
+* **GitHub** : Reference a module using an HTTP or SSH link.
+
+  ```markdown
+  module "example" {
+  source = "github.com/hashicorp/example?ref=v1.2.0"
+  }
+  ```
+
+* **Generic Git Repo** : Reference a module using a URL with a username and password.
+
+  ```markdown
+  module "example" {
+  source = "git::ssh://username@example.com/storage.git"
+  }
+  ```
+
+**Characteristics of a Good Module**
+
+* Raise the abstraction level from the base resource type.
+* Group resources into logical groupings.
+* Expose necessary input variables for customization.
+* Provide useful and usable default values.
+* Return outputs necessary for integration with other systems.
+
+#### **Terraform Registry**
+
+The Terraform registry hosts many different modules associated with various providers, such as AWS.
+
+These modules can serve as a starting point for your projects
+
+![image module](image/registry.png)
+
+![image module](image/registry1.png)
+
 ### **Terraform Modules Applied**
+
+we will demonstrate how to refactor our example web application configuration using Terraform modules.
+
+To do this, we will break up the configuration into different components:
+
+* compute
+* database
+* storage
+* networking.
+
+Move the resource definitions from the main.tf file to their corresponding .tf files.
+
+![image module](image/console5.PNG)
+
+To consume the module:
+
+* Create a main.tf file in the **web-app** directory to consume the **web-app-module** module
+* Set up the back-end and required providers
+* Define the input variables that the module will consume
+
+```markdown
+terraform {
+  # Assumes s3 bucket and dynamo DB table already set up
+  backend "s3" {
+    bucket         = "devops-directive-tf-state-config"
+    key            = "organization-and-modules/web-app/terraform.tfstate"
+    region         = "us-east-1"
+    dynamodb_table = "terraform-state-locking"
+    encrypt        = true
+  }
+
+  required_providers {
+    aws = {
+      source  = "hashicorp/aws"
+      version = "~> 3.0"
+    }
+  }
+}
+
+provider "aws" {
+  region = "us-east-1"
+}
+
+variable "db_pass_1" {
+  description = "password for database #1"
+  type        = string
+  sensitive   = true
+}
+
+variable "db_pass_2" {
+  description = "password for database #2"
+  type        = string
+  sensitive   = true
+}
+
+module "web_app_1" {
+  source = "../web-app-module"
+
+  # Input Variables
+  bucket_prefix    = "web-app-1-data"
+  domain           = "devopsdeployed.com"
+  app_name         = "web-app-1"
+  environment_name = "production"
+  instance_type    = "t2.micro"
+  create_dns_zone  = true
+  db_name          = "webapp1db"
+  db_user          = "foo"
+  db_pass          = var.db_pass_1
+}
+
+module "web_app_2" {
+  source = "../web-app-module"
+
+  # Input Variables
+  bucket_prefix    = "web-app-2-data"
+  domain           = "anotherdevopsdeployed.com"
+  app_name         = "web-app-2"
+  environment_name = "production"
+  instance_type    = "t2.micro"
+  create_dns_zone  = true
+  db_name          = "webapp2db"
+  db_user          = "bar"
+  db_pass          = var.db_pass_2
+}
+```
+
+By using these two module blocks, we can easily deploy two copies of the web application with slightly different configurations.
+
+When running **terraform apply**, you will be prompted to enter the values for db_pass_1 and db_pass_2. Once the apply is complete, you will have two copies of the web application running across four EC2 instances in AWS.
+
+Finally, run terraform destroy to clean up the resources created during this lesson.
+
+Now that you have seen how to refactor your Terraform code into different sections, parameterize it with variables, and abstract complexity using modules, you can efficiently provision multiple instances of the web application with different configurations.
 
 ## **Managing Multiple Environments**
 
