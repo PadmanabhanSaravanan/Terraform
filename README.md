@@ -1826,3 +1826,21 @@ These checks are not tests, but they are useful for analyzing the codebase.
 * **Third-party tools**: Use third-party tools to scan Terraform configurations for correctness, security, and compliance.
 
 ## **Developer Workflows**
+
+**Workflow for Terraform Developers**
+
+1. Write and update Terraform code.
+
+2. Test the changes locally in a development environment.
+
+3. Create a pull request (PR) in a version control system (e.g., GitHub).
+
+4. Have a colleague review the PR and suggest improvements.
+
+5. Run tests within a continuous integration (CI) system (e.g., GitHub Actions).
+
+6. If tests pass, merge the PR into the main branch.
+
+7. Use an automated pipeline in the CI/CD tool to deploy the changes to the staging environment.
+
+8. Deploy the changes to production when tagging a new release.
