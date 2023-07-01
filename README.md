@@ -13,6 +13,7 @@
 * [**Managing Multiple Environments**](#managing-multiple-environments) <!-- style="font-size:20px" -->
 * [**Testing Terraform Code**](#testing-terraform-code) <!-- style="font-size:20px" -->
 * [**Developer Workflows**](#developer-workflows) <!-- style="font-size:20px" -->
+* [**References**](#references)
 
 ## **Evolution of Cloud and Infrastructure as Code** <!-- style="font-size:20px" -->
 
@@ -150,7 +151,7 @@ Installing Terraform on Windows requires you to download the correct Terraform p
 To install in Mac or linux system Refere to this [link](https://developer.hashicorp.com/terraform/downloads)
 
 **Step1 : Download Terraform File for Windows**
-`
+
 1. Browse to the [Download Terraform](https://developer.hashicorp.com/terraform/downloads) page.
 
 2. Select the Windows tab under the Operating System heading. The latest version is preselected.
@@ -597,6 +598,8 @@ resource "aws_dynamodb_table" "terraform_locks" {
 
 ### **Sample Application Walkthrough**
 
+Refere to the [link](https://github.com/PadmanabhanSaravanan/Terraform/tree/Terraform-v1/Sample-webapp) for the example 
+
 **Step1** : Set up your Terraform Backend
 Choose between Terraform Cloud, AWS S3 + DynamoDB, or a local backend. For this example, we will use the AWS S3 backend with DynamoDB for state locking. See the previous lesson for info about setting this up.
 
@@ -965,6 +968,8 @@ Also, avoid storing sensitive data in files, and consider using these options fo
 
 ### **Variables and Outputs Applied**
 
+Refere to the [link](https://github.com/PadmanabhanSaravanan/Terraform/tree/Terraform-v1/Variables%20%26%20Outputs) for the example
+
 **1.** **Local Variables** : Declare local variables in your main.tf file to define values that are scoped within the project and reused throughout the configuration (but cannot be passed in at runtime):
 
 ```markdown
@@ -1170,6 +1175,8 @@ resource "aws_instance" "example" {
 ```
 
 #### **Provisioners**
+
+Refere the [link](https://github.com/PadmanabhanSaravanan/Terraform/tree/Terraform-v1/provisioner) for the example
 
 Provisioning mainly deals with configuration activities that happen after the resource is created. It may involve some file operations, executing CLI commands, or even executing the script. Once the resource is successfully initialized, it is ready to accept connections. These connections help Terraform log into the newly created instance and perform these operations.
 
@@ -1497,6 +1504,8 @@ These modules can serve as a starting point for your projects
 
 ### **Terraform Modules Applied**
 
+Refere the [link](https://github.com/PadmanabhanSaravanan/Terraform/tree/Terraform-v1/organization-and-modules) for the example
+
 we will demonstrate how to refactor our example web application configuration using Terraform modules.
 
 To do this, we will break up the configuration into different components:
@@ -1606,6 +1615,8 @@ This helps in testing changes, ensuring that the configurations are similar acro
 
 * [**Terraform Workspaces**](#terraform-workspaces)
 * [**Separate Subdirectories**](#separate-subdirectories)
+
+Refere the [link](https://github.com/PadmanabhanSaravanan/Terraform/tree/Terraform-v1/managing-multiple-environments) for the example
 
 #### **Terraform Workspaces**
 
@@ -1844,3 +1855,8 @@ These checks are not tests, but they are useful for analyzing the codebase.
 7. Use an automated pipeline in the CI/CD tool to deploy the changes to the staging environment.
 
 8. Deploy the changes to production when tagging a new release.
+
+## **References**
+
+* https://courses.devopsdirective.com/terraform-beginner-to-pro/lessons/00-introduction/01-main
+* https://developer.hashicorp.com/terraform/docs
