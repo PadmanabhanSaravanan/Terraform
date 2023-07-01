@@ -1598,9 +1598,189 @@ Now that you have seen how to refactor your Terraform code into different sectio
 
 ### **Managing TF Environments**
 
+When deploying a web application, you might want to have multiple environments such as production, staging, and development.
+
+![image](image/TF-env.png)
+
+This helps in testing changes, ensuring that the configurations are similar across environments. There are two main approaches to manage multiple environments with Terraform:
+
+* [**Terraform Workspaces**](#terraform-workspaces)
+* [**Separate Subdirectories**](#separate-subdirectories)
+
+#### **Terraform Workspaces**
+
+* [Terraform Workspaces](https://developer.hashicorp.com/terraform/language/state/workspaces#using-workspaces) are a feature that allows you to break your Terraform state into separate configurations.
+* This allows you to manage multiple environments, each with their own unique portion of the state file.
+
+![image](image/TF-env1.png)
+
+**Pros:**
+
+* Easy to get started with.
+* Minimizes code duplication between environments.
+* Convenient as you can reference terraform.workspace as an expression within your Terraform files to populate names of resources.
+
+**Cons:**
+
+* Can be dangerous if you accidentally apply changes to the wrong environment.
+* State files are stored within the same remote back end, making permissioning and access challenging.
+* Cannot easily determine the deployed state by simply looking at the codebase.
+
+#### **Separate Subdirectories**
+
+The alternative to using workspaces, is to define separate environments as separate directories within the filesystem. You have one directory (and its children) for each environment you plan to deploy.
+
+![image](image/TF-env2.png)
+
+**Pros:**
+
+* Isolates back ends, allowing for separate back-end configurations and improved security.
+* Decreases potential for human error as environments are managed separately.
+* The codebase fully represents the deployed state, making it easier to understand.
+
+**Cons:**
+
+* Requires navigating between subdirectories to apply changes to each environment.
+* More code duplication as each **main.tf** file represents a similar configuration.
+
 ### **Using Terraform Workspaces**
 
+**Defining the Root Module**
+
+**1.** Create a new directory called workspace. This directory will contain the **main.tf** file for the Terraform workspace implementation.
+
+**2.** Inside the **main.tf** file, set up the backend and providers.
+
+```markdown
+terraform {
+  # Assumes s3 bucket and dynamo DB table already set up
+  backend "s3" {
+    bucket         = "devops-directive-tf-state-config"
+    key            = "managing-multiple-environments/workspaces/terraform.tfstate"
+    region         = "us-east-1"
+    dynamodb_table = "terraform-state-locking"
+    encrypt        = true
+  }
+
+  required_providers {
+    aws = {
+      source  = "hashicorp/aws"
+      version = "~> 3.0"
+    }
+  }
+}
+```
+
+**3.** Add a variable for the sensitive password value.
+
+```markdown
+variable "db_pass" {
+  description = "password for database"
+  type        = string
+  sensitive   = true
+}
+```
+
+**4.** Make use of the workspace's name for postfixing certain resources, such as the S3 bucket, to avoid naming conflicts.
+
+```markdown
+locals {
+  environment_name = terraform.workspace
+}
+
+resource "aws_s3_bucket" "bucket" {
+  bucket = "web-app-data-${local.environment_name}"
+}
+```
+
+**5.** Populate all the input variables for the module so it knows how to provision the environment.
+
+```markdown
+module "web_app" {
+  source = "../../organization-and-modules/web-app-module"
+
+  # Input Variables
+  bucket_prefix    = "web-app-data-${local.environment_name}"
+  domain           = "devopsdeployed.com"
+  environment_name = local.environment_name
+  instance_type    = "t2.micro"
+  create_dns_zone  = terraform.workspace == "production" ? true : false
+  db_name          = "${local.environment_name}mydb"
+  db_user          = "foo"
+  db_pass          = var.db_pass
+}
+```
+
+**6.** Use conditionals to determine whether to provision the DNS zone or use an existing one based on the environment (production or staging).
+
+```markdown
+create_dns_zone  = terraform.workspace == "production" ? true : false
+```
+
+**Creating Production and Staging Environments**
+
+**1.** Initialize Terraform using `terraform init`.
+
+**2.** Create a new environment called "production" using the command `terraform workspace new production`. To verify the creation, use `terraform workspace list`.
+
+**3.** Deploy the environment using `terraform apply`. Pass the sensitive database password during runtime.
+
+**4.** Once the production environment is created, create another environment called "staging" using `terraform workspace new staging`.
+
+**5.** Deploy the staging environment using `terraform apply`. Pass the sensitive database password during runtime.
+
+**6.** As a result, two copies of the web application will be running, one at  production and the other at staging.
+
+**Cleanup**
+
+**1.** To avoid incurring additional costs by leaving the infrastructure running, you can destroy destroy both environments using the terraform destroy command.
+
+**2.** You will need ot switch to each environment using the `terraform workspace select WORKSPACE_NAME` followed by `terraform destroy`
+
+**3.** In this chapter, we demonstrated how to use Terraform Workspaces to manage multiple environments for our sample web application.
+
+**4.** We created two environments, production and staging, and deployed the web application to both environments, all from the same codebase.
+
 ### **Using Subdirectory Environments**
+
+We will create two environments, production and staging, and deploy the web application to both environments using a directory layout approach.
+
+**Refactoring the Codebase**
+
+**1.** Create a three new subdirectories: **global**, **production**, and **staging**.
+
+**2.** The **global** directory will contain resources shared across multiple environments, such as the Route 53 Zone. Add a **main.tf** file in the **global** directory with the Terraform block and the resource for the Route 53 Zone.
+
+```markdown
+# Route53 zone is shared across staging and production
+resource "aws_route53_zone" "primary" {
+  name = "MY_DOMAIN.com"
+}
+```
+
+**3.** In both the production and staging directories, create a main.tf file defining the options for the module being deployed.
+
+These files will be similar to the previous examples, but set the create_dns_zone variable to false since the DNS zone is managed in the global directory.
+
+**Deploying the Environments**
+
+**1.** Navigate to the **global** directory, initialize Terraform using `terraform init`, and apply the configuration using `terraform apply`. This step will create the shared Route 53 Zone.
+
+**2.** Navigate to the **production** directory, initialize Terraform using `terraform init`, and apply the configuration using `terraform apply`. This will deploy the production environment.
+
+**3.** Navigate to the **staging** directory, initialize Terraform using `terraform init`, and apply the configuration using `terraform apply`. This will deploy the staging environment.
+
+**Advantages and Disadvantages of the Subdirectories Approach**
+
+**Advantages:**
+
+* Clear organization of environments in the file structure.
+* Easier to reason about the actual infrastructure deployed.
+
+**Disadvantages:**
+
+* More code repetition, as each environment has its own main.tf file.
+* Some limitations in templating the backend provider, leading to hardcoding values.
 
 ## **Testing Terraform Code**
 
