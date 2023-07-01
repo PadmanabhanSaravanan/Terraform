@@ -21,15 +21,13 @@ provider "aws" {
 }
 
 variable "db_pass_1" {
-  description = "password for database #1"
+  description = "password for database #1 more than 8 characters"
   type        = string
-  sensitive   = true
 }
 
 variable "db_pass_2" {
-  description = "password for database #2"
+  description = "password for database #2 more than 8 characters"
   type        = string
-  sensitive   = true
 }
 
 module "web_app_1" {

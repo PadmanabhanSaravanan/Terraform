@@ -21,9 +21,8 @@ provider "aws" {
 }
 
 variable "db_pass" {
-  description = "password for database"
+  description = "password for database more than 8 characters"
   type        = string
-  sensitive   = true
 }
 
 locals {
