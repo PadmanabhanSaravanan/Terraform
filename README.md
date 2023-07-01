@@ -1784,18 +1784,45 @@ These files will be similar to the previous examples, but set the create_dns_zon
 
 ## **Testing Terraform Code**
 
-* [**Testing Terraform Code (Theory)**](#testing-terraform-code-theory) <!-- style="font-size:20px" -->
-* [**Testing Terraform Code (Practice)**](#testing-terraform-code-practice) <!-- style="font-size:20px" -->
+The importance of testing your Terraform code to ensure that your infrastructure-as-code configurations maintain high quality and continue to perform as expected.
 
-### **Testing Terraform Code Theory**
+**Code Rot**
 
-### **Testing Terraform Code Practice**
+Code rot refers to the gradual degradation of a codebase over time due to external dependencies changing, other changes in the codebase impacting specific functions, or unapplied changes. In the context of Terraform and infrastructure, code rot may occur due to:
+
+* Out-of-band changes.
+* Unpinned versions of providers.
+* Deprecated external modules or resource types.
+* Unapplied changes to Terraform configurations.
+
+**Preventing Code Rot with Testing**
+
+To prevent code rot, we can perform various types of tests on our Terraform code:
+
+1. **Static checks**: Run built-in Terraform commands like `terraform fmt`, `terraform validate`, and `terraform plan` to check the formatting, validate configurations, and compare the desired state with the actual state, respectively. Use custom validation rules to further validate your infrastructure configurations.
+
+2. **Third-party tools**: Use tools like **tflint**, **checkov**, **tfsec**, and **terrascan** to perform additional checks on your codebase. Terraform Sentinel, available only for enterprise customers, provides security and compliance guarantees.
+
+3. **Manual testing**: Follow the standard Terraform workflow, running `terraform init`, `terraform apply`, and `terraform destroy` to test your configuration manually.
+
+4. **Automated testing**: Automate the manual testing steps using a shell script or a more robust method, such as utilizing a testing framework like TerraTest with Go to write complex tests and make assertions about your infrastructure.
+
+**Static Checks**
+
+These checks are not tests, but they are useful for analyzing the codebase.
+
+**1.** **terraform fmt**: Formats your code according to Terraform's opinionated formatting structure. This can be used in continuous integration to enforce a consistent style guide.
+
+![format](image/fmt.PNG)
+
+* `terraform fmt --check` command is used to check the formatting structure
+* `terraform fmt` is used to formats your code according to Terraform's opinionated formatting structure
+
+**2.** **terraform validate**: Checks if your code is a valid Terraform configuration.
+
+![validate](image/validate.PNG)
+
+* **Custom validation rules**: Use the variable block to enforce certain conditions for variables. For example, enforce a minimum length for a password.
+* **Third-party tools**: Use third-party tools to scan Terraform configurations for correctness, security, and compliance.
 
 ## **Developer Workflows**
-
-* [**Developer Workflows**](#developer-workflows) <!-- style="font-size:20px" -->
-* [**GitHub Actions Automation**](#github-actions-automation) <!-- style="font-size:20px" -->
-
-### **Developer Workflows**
-
-### **GitHub Actions Automation**
