@@ -1428,7 +1428,7 @@ As a result, when we log into the same EC2 instance, we should have a file named
 
 ## **Create Users Example**
 
-Refere to the [link] for the example
+Refere to the [link](https://github.com/PadmanabhanSaravanan/Terraform/tree/Terraform-v1/creating-user) for the example
 
 **Step1** Create a file named main.tf & variables.tf with the following content
 
@@ -1493,11 +1493,11 @@ variable "user_policy"{
 
 ![image init](image/user1.PNG)
 
-* Run terraform apply to create the specified resources. Confirm the action when prompted.
+* Run **terraform apply** to create the specified resources. Confirm the action when prompted.
 
 ![image init](image/user2.PNG)
 
-* To clean up resources and avoid unnecessary costs, run terraform destroy and confirm the action when prompted.
+* To clean up resources and avoid unnecessary costs, run **terraform destroy** and confirm the action when prompted.
 
 ## **Terraform Modules**
 
