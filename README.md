@@ -9,6 +9,7 @@
 * [**Basic Terraform Usage**](#basic-terraform-usage) <!-- style="font-size:20px" -->
 * [**Variables and Outputs**](#variables-and-outputs) <!-- style="font-size:20px" -->
 * [**Additional HCL Features**](#additional-hcl-features) <!-- style="font-size:20px" -->
+* [**Create Users Example**](#create-users-example) <!-- style="font-size:20px" -->
 * [**Terraform Modules**](#terraform-modules) <!-- style="font-size:20px" -->
 * [**Managing Multiple Environments**](#managing-multiple-environments) <!-- style="font-size:20px" -->
 * [**Testing Terraform Code**](#testing-terraform-code) <!-- style="font-size:20px" -->
@@ -1424,6 +1425,79 @@ variable "instance_type" {
 As a result, when we log into the same EC2 instance, we should have a file named “hello.txt” with a message “Have a great day!” in its contents. Let us verify the same.
 
 ![image](image/console4.PNG)
+
+## **Create Users Example**
+
+Refere to the [link] for the example
+
+**Step1** Create a file named main.tf & variables.tf with the following content
+
+```markdown
+# main.tf
+
+terraform {
+  backend "local" {
+    path = "./creating_user/terraform.tfstate"
+  }
+  
+
+  required_providers {
+    aws = {
+      source  = "hashicorp/aws"
+      version = "~> 3.0"
+    }
+  }
+}
+
+provider "aws" {
+  region = "us-east-1"
+  profile = "default"
+}
+
+# Create an User profile
+
+resource "aws_iam_user" "user" {
+  name = var.aws_user_name
+}
+
+# Attach the IAM policy to the user
+resource "aws_iam_policy_attachment" "attach_user" {
+  name       = "aws_iam_policy_attachment"
+  users      = [aws_iam_user.user.name]
+  policy_arn = var.user_policy
+}
+```
+
+```markdown
+# variable.tf
+variable "aws_user_name"{
+    default     = "terraform_user_1"
+    description = "enter the name"
+    type        = string
+}
+
+variable "user_policy"{
+  description   = "ARN of policy to be associated with the created IAM user"
+  type          = string
+  default       = "arn:aws:iam::aws:policy/AmazonEC2FullAccess"
+}
+```
+
+**Using Terraform Commands:**
+
+* Initialize Terraform in the directory containing main.tf by running **terraform init**. This sets up the backend and state storage.
+
+![image init](image/user.PNG)
+
+* Run **terraform plan** to view the changes Terraform will make to your infrastructure.
+
+![image init](image/user1.PNG)
+
+* Run terraform apply to create the specified resources. Confirm the action when prompted.
+
+![image init](image/user2.PNG)
+
+* To clean up resources and avoid unnecessary costs, run terraform destroy and confirm the action when prompted.
 
 ## **Terraform Modules**
 
