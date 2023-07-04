@@ -1870,6 +1870,8 @@ These files will be similar to the previous examples, but set the create_dns_zon
 
 ## **Create EKS Cluster Using Terraform**
 
+Refere the [link](https://github.com/PadmanabhanSaravanan/Terraform/tree/Terraform-v1/eks) for the example
+
 **Step 1** : Create AWS VPC using Terraform
 
 Create AWS provider and give it a name **0-provider.tf**
@@ -2515,7 +2517,7 @@ output "eks_cluster_autoscaler_arn" {
 terraform apply
 ```
 
-* Let's create autoscaller itself. You can find the source code for autoscaller [here].
+* Let's create autoscaller itself. You can find the source code for autoscaller [here](https://github.com/PadmanabhanSaravanan/Terraform/blob/Terraform-v1/eks/k8s/cluster-autoscaler.yaml).
 
 * Go back to the terminal and apply
 
