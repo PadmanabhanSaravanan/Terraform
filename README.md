@@ -9,13 +9,14 @@
 * [**Basic Terraform Usage**](#basic-terraform-usage) <!-- style="font-size:20px" -->
 * [**Variables and Outputs**](#variables-and-outputs) <!-- style="font-size:20px" -->
 * [**Additional HCL Features**](#additional-hcl-features) <!-- style="font-size:20px" -->
-* [**Create Users Example**](#create-users-example) <!-- style="font-size:20px" -->
 * [**Terraform Modules**](#terraform-modules) <!-- style="font-size:20px" -->
 * [**Managing Multiple Environments**](#managing-multiple-environments) <!-- style="font-size:20px" -->
-* [**Create EKS Cluster Using Terraform**](#create-eks-cluster-using-terraform) <!-- style="font-size:20px" -->
 * [**Testing Terraform Code**](#testing-terraform-code) <!-- style="font-size:20px" -->
 * [**Developer Workflows**](#developer-workflows) <!-- style="font-size:20px" -->
-* [**References**](#references)
+* [**Create Users Example**](#create-users-example) <!-- style="font-size:20px" -->
+* [**Sample Application Walkthrough**](#sample-application-walkthrough) <!-- style="font-size:20px" -->
+* [**Create EKS Cluster Using Terraform**](#create-eks-cluster-using-terraform) <!-- style="font-size:20px" -->
+* [**References**](#references) <!-- style="font-size:20px" -->
 
 ## **Evolution of Cloud and Infrastructure as Code** <!-- style="font-size:20px" -->
 
@@ -113,15 +114,21 @@ Terraform can be used in conjunction with other IaC tools to create powerful and
 * Terraform provisions virtual machines
 * Ansible installs and configures dependencies inside virtual machines.
 
+![image terraform](image/config.PNG)
+
 **2.** Terraform + Templating Tools (e.g., Packer):
 
 * I Terraform provisions servers.
 * Packer builds the image from which virtual machines are created.
 
+![image terraform](image/config1.PNG)
+
 **3.** Terraform + Orchestration Tools (e.g., Kubernetes):
 
 * Terraform provisions Kubernetes clusters.
 * Kubernetes defines how the application is deployed and managed on the cloud resources.
+
+![image terraform](image/config2.PNG)
 
 #### **Terraform Architecture**
 
@@ -202,7 +209,7 @@ The output shows the Terraform version you downloaded and installed on your Wind
 
 #### **Authenticating with AWS**
 
-**Step1** : Create a user with the necessary IAM roles for your project. In this example, we used the following permissions:
+**Step1** : Create a user with the necessary IAM roles for your project. In this tutorial example, we used the following permissions:
 
 * RDS access (AmazonRDSFullAccess)
 * EC2 access (AmazonEC2FullAccess)
@@ -217,7 +224,7 @@ The output shows the Terraform version you downloaded and installed on your Wind
 
 **Step2** Install the AWS Command Line Interface (CLI) by following the instructions on the [AWS CLI installation page](https://aws.amazon.com/cli/).
 
-if you facing the below error text click on the [link](image/install7.PNG)
+After AWS CLI installation ,if you facing the below error text click on the [link](image/install7.PNG)
 
 ```markdown
 $ aws --version
@@ -229,6 +236,30 @@ command not found: aws
 ```markdown
 aws configure
 ```
+
+To create access key ID & secret access key follow the Steps :
+
+* go to IAM Service & select the user you have to login using aws cli 
+
+![image aws-access](image/install14.PNG)
+
+* on user tab select the security credentials
+
+![image aws-access](image/install15.PNG)
+
+* In security credentials page see for access key option and select create access key
+
+![image aws-access](image/install16.PNG)
+
+* which will load to create access key page and select the command line interface and click on next
+
+![image aws-access](image/install17.PNG)
+
+* tags(optional) , click on create access key will create new access key id & secret access key and you can download them and keep them for your future reference
+
+![image aws-access](image/install18.PNG)
+
+Using the above access key ID and secret key login to your aws account
 
 ![image Insatallation](image/install8.PNG)
 
@@ -243,18 +274,24 @@ terraform {
   required_providers {
     aws = {
       source  = "hashicorp/aws"
-      version = "~> 3.0"
+      version = "~> 4.16"
     }
   }
+
+  required_version = ">= 1.2.0"
 }
 
 provider "aws" {
-  region = "us-east-1"
+  region  = "us-east-1"
 }
 
-resource "aws_instance" "example" {
+resource "aws_instance" "my_ec2_instance" {
   ami           = "ami-011899242bb902164" # Ubuntu 20.04 LTS // us-east-1
   instance_type = "t2.micro"
+
+  tags = {
+    Name = "ExampleAppServerInstance"
+  }
 }
 ```
 
@@ -288,7 +325,6 @@ By following these steps, you have installed Terraform, authenticated with AWS, 
 * [**Terraform State Management**](#terraform-state-management) <!-- style="font-size:20px" -->
 * [**Terraform Plan,Apply & Destroy**](#terraform-plan,apply-&-destroy) <!-- style="font-size:20px" -->
 * [**Remote Backend Considerations**](#remote-backend-considerations) <!-- style="font-size:20px" -->
-* [**Sample Application Walkthrough**](#sample-application-walkthrough) <!-- style="font-size:20px" -->
 
 ### **Terraform Providers + Init**
 
@@ -474,16 +510,31 @@ To use Terraform Cloud from the command line, you must log in. Logging in allows
 
 **Step2** Configure terraform main.tf 
 
-* Specify a backend type of "remote" with organization and workspace names in the Terraform configuration
+* Specify a cloud with organization and workspace names in the Terraform configuration
 
 ```markdown
 terraform {
-  backend "remote"{
-    organization = "organization-name"
+  cloud {
+    organization = "<organization-name>"
 
-    workspaces{
-      name = "workspace-name"
+    workspaces {
+      name = "<workspace-name>"
     }
+  }
+}
+
+provider "aws" {
+  region = "<region>"
+  access_key = "<my-access-key>"
+  secret_key = "<my-secret-key>"
+}
+
+resource "aws_instance" "my_ec2_instance" {
+  ami           = "ami-011899242bb902164" # Ubuntu 20.04 LTS // us-east-1
+  instance_type = "t2.micro"
+
+  tags = {
+    Name = "ExampleAppServerInstance"
   }
 }
 ```
@@ -510,11 +561,27 @@ terraform {
 
 ![image token](image/terraformlogin3.png)
 
-**Web UI allows you to interact with your account, organization, and workspaces**
+**Step6** Initialize, Plan, and Apply the Configuration
 
-![image token](image/terraform-cloud1.png)
+* Run "**terraform init**" to initialize the remote backend.
 
-Free up to five users within an organization, but costs $20 per user per month for more than five users
+![image cloud](image/cloud-state1.PNG)
+
+* After Initializing you can check in your workspace a state file will be created
+
+![image cloud](image/cloud-state.PNG)
+
+* Run "**terraform plan**" to review the changes.
+
+![image cloud](image/cloud-state2.PNG)
+
+* Run "**terraform apply**" to apply the changes and provision the resources
+
+![image cloud](image/cloud-state3.PNG)
+
+* Run "**terraform destroy**" to destroy all the resources 
+
+![image cloud](image/cloud-state4.PNG)
 
 #### **Self-managed Backend AWS S3**
 
@@ -527,10 +594,10 @@ Free up to five users within an organization, but costs $20 per user per month f
 ```markdown
 terraform {
  backend "s3" {
-    bucket         = "devops-directive-tf-state-bucket"
-    key            = "aws-example/terraform.tfstate" #set as per you file structure
+    bucket         = "<bucket-name>"
+    key            = "terraform.tfstate" 
     region         = "us-east-1"
-    dynamodb_table = "terraform-state-locking"
+    dynamodb_table = "<dynamo-tablename>"
     encrypt        = true
   }
 }
@@ -538,36 +605,36 @@ terraform {
 
 #### **Bootstrapping Process for AWS S3 Backend**
 
+To boostrap AWS S3 Backend two steps as to followed
+
+**Step1** : [**Create S3 & dynamo table using terraform**](#create-s3-&-dynamo-table)
+
+**Step2** : [**S3 Backend configuration**](#s3-backend-configuration)
+
+##### **Create S3 & dynamo table**
+
 * Create a Terraform configuration without a remote backend (defaults to a local backend)
 * Define the necessary AWS resources: S3 bucket and DynamoDB table with a hash key named **"LockID"**
-* Run `terraform apply` to create the S3 bucket and DynamoDB table
-* Update the Terraform configuration to use the remote backend with the S3 bucket and DynamoDB table
-* Re-run `terraform init` to import the state into the new remote backend
+
+Example:
 
 ```markdown
 terraform {
-   backend "s3" {
-     bucket         = "devops-directive-tf-state" # REPLACE WITH YOUR BUCKET NAME
-     key            = "aws-example/terraform.tfstate" #set as per you file structure
-     region         = "us-east-1"
-     dynamodb_table = "terraform-state-locking"
-     encrypt        = true
-   }
-
   required_providers {
     aws = {
       source  = "hashicorp/aws"
-      version = "~> 3.0"
+      version = "~> 4.16"
     }
   }
+
+  required_version = ">= 1.2.0"
 }
 
 provider "aws" {
-  region = "us-east-1"
+  region  = "us-east-1"
 }
 
 resource "aws_s3_bucket" "terraform_state" {
-  bucket        = "devops-directive-tf-state" # REPLACE WITH YOUR BUCKET NAME
   force_destroy = true
 }
 
@@ -598,29 +665,1180 @@ resource "aws_dynamodb_table" "terraform_locks" {
 }
 ```
 
-### **Sample Application Walkthrough**
+* Run "**terraform init**" to initialize the local backend.
 
-Refere to the [link](https://github.com/PadmanabhanSaravanan/Terraform/tree/Terraform-v1/Sample-webapp) for the example 
+![image s3](image/s3.PNG)
 
-**Step1** : Set up your Terraform Backend
-Choose between Terraform Cloud, AWS S3 + DynamoDB, or a local backend. For this example, we will use the AWS S3 backend with DynamoDB for state locking. See the previous lesson for info about setting this up.
+* Run "**terraform plan**" to review the changes.
 
-**Step2** : Create a main.tf file and configure the backend definition:
+![image s3](image/s31.PNG)
 
-The backend configuration goes within the top level terraform {} block.
+![image s3](image/s32.PNG)
+
+* Run "**terraform apply**" to apply the changes and provision the resources
+
+![image s3](image/s33.PNG)
+
+After **terrafrom apply** a s3 bucket and dynamodb table will be created. check for the s3 bucket and dynamodb table name for further references
+
+##### **S3 Backend configuration**
+
+* Update the Terraform configuration to use the remote backend with the S3 bucket and DynamoDB table
+
+Example:
 
 ```markdown
 terraform {
-  # Assumes s3 bucket and dynamo DB table already set up
-  # See /code/03-basics/aws-backend
-  backend "s3" {
-    bucket         = "devops-directive-tf-state"
-    key            = "03-basics/web-app/terraform.tfstate"
-    region         = "us-east-1"
-    dynamodb_table = "terraform-state-locking"
-    encrypt        = true
-    profile        = "default"
+   backend "s3" {
+     bucket         = "<bucket-name>"  #replace with the bucket-name-created
+     key            = "terraform.tfstate" 
+     region         = "us-east-1"
+     dynamodb_table = "<dynamo-tablename>"  #replace with your dynamotable name
+     encrypt        = true
+   }
+
+  required_providers {
+    aws = {
+      source  = "hashicorp/aws"
+      version = "~> 4.16"
+    }
   }
+  required_version = ">= 1.2.0"
+}
+
+
+provider "aws" {
+  region = "us-east-1"
+}
+
+resource "aws_instance" "my_ec2_instance" {
+  ami           = "ami-011899242bb902164" # Ubuntu 20.04 LTS // us-east-1
+  instance_type = "t2.micro"
+
+  tags = {
+    Name = "ExampleAppServerInstance"
+  }
+}
+```
+
+* Run "**terraform init**" to initialize the remote backend.
+
+![image cloud](image/s3backend.PNG)
+
+* After Initializing you can check in your s3 bucket object a state file will be created
+
+![image cloud](image/s3backend3.PNG)
+
+* Run "**terraform plan**" to review the changes.
+
+![image cloud](image/s3backend1.PNG)
+
+* Run "**terraform apply**" to apply the changes and provision the resources
+
+![image cloud](image/s3backend2.PNG)
+
+* Run "**terraform destroy**" to destroy all the resources 
+
+![image cloud](image/s3backend4.PNG)
+
+## **Variables and Outputs**
+
+* [**Variables and Outputs (Theory)**](#variables-and-outputs-theory) <!-- style="font-size:20px" -->
+* [**Variables and Outputs Example**](#variables-and-outputs-example) <!-- style="font-size:20px" -->
+
+### **Variables and Outputs Theory**
+
+Terraform variables and outputs enable more flexible and modular code by breaking out hard-coded values.
+
+* [**Types of Variables**](#types-of-variables)
+* [**Setting Input Variables**](#setting-input-variables)
+* [**Variable Value Types**](#variable-value-types)
+* [**Handling Sensitive Data**](#handling-sensitive-data)
+
+#### **Types of Variables**
+
+**1.** **Input Variables** : Input variables are like input parameters or arguments for a function. They are referenced using var.name. To declare an input variable, use the following syntax:
+
+```markdown
+variable "instance_type" {
+  type = string
+  default = "t2.micro"
+}
+```
+
+You can find more information in the [Terraform documentation](https://developer.hashicorp.com/terraform/language/values/variables)
+
+**2.** **Local Variables** : Local variables are like temporary variables within the scope of a function. They are referenced using local.name, and declared with locals (plural). For example:
+
+```markdown
+locals {
+  service_name = "example-service"
+  owner = "your_name"
+}
+```
+
+You can find more information in the [Terraform documentation](https://developer.hashicorp.com/terraform/language/values/locals)
+
+**3.** **Output Variables** : Output variables are like the return values of a function. They allow bundling multiple Terraform configurations together. To declare an output variable, use the following syntax:
+
+```markdown
+output "instance_ip" {
+  value = aws_instance.example.public_ip
+}
+```
+
+You can find more information in the [Terraform documentation](https://developer.hashicorp.com/terraform/language/values/outputs)
+
+#### **Setting Input Variables**
+
+Input variables can be set in several ways, ranked in order of precedence from lowest to highest:
+
+1. **Terraform CLI prompts** : If you don't specify a variable anywhere and there's no default value, the Terraform CLI will prompt you for a value.
+2. **Default value in the block** : You can specify a default value when declaring the variable.
+3. **Environment variables** : Use the prefix **TF_VAR_** followed by the variable name.
+4. **Terraform .tfvars files** : Store values in **.tfvars** files.
+5. **Auto-applied .auto.tfvars files** : These files will be applied over the **.tfvars** files.
+6. **-var or -var-file options** : Pass values when issuing the terraform plan or terraform apply commands.
+
+#### **Variable Value Types**
+
+Variables can hold different value types:
+
+* **Primitive types**: string, number, or boolean.
+* **Complex types**: lists, sets, maps, etc.
+
+Type checking happens automatically in Terraform. You can also write your own validation rules.
+
+#### **Handling Sensitive Data**
+
+When using sensitive data in variables, like a database password, add the **sensitive = true** attribute when defining the variable. This will cause those data to be masked in the Terraform plan output to prevent leaking credentials.
+
+Also, avoid storing sensitive data in files, and consider using these options for passing in those data:
+
+* environment Variables
+* -var command
+* external secret stores like AWS Secrets Manager or HashiCorp Vault.
+
+### **Variables and Outputs Example**
+
+**main.tf**
+
+```markdown
+terraform {
+  required_providers {
+    aws = {
+      source  = "hashicorp/aws"
+      version = "~> 4.16"
+    }
+  }
+
+  required_version = ">= 1.2.0"
+}
+
+provider "aws" {
+  region = var.region
+}
+
+resource "aws_instance" "my_ec2_instance" {
+  ami             = var.ami
+  instance_type   = var.instance_type
+  user_data       = <<-EOF
+              #!/bin/bash
+              echo "Hello, World 1" > index.html
+              python3 -m http.server 8080 &
+              EOF
+
+  tags = {
+    Name = "ExampleAppServerInstance"
+  }
+}
+```
+
+**variables.tf**
+
+```markdown
+variable "region" {
+  description = "Default region for provider"
+  type        = string
+  default     = "us-east-1"
+}
+
+# EC2 Variables
+
+variable "ami" {
+  description = "Amazon machine image to use for ec2 instance"
+  type        = string
+  default     = "ami-011899242bb902164" # Ubuntu 20.04 LTS // us-east-1
+}
+
+variable "instance_type" {
+  description = "ec2 instance type"
+  type        = string
+  default     = "t2.micro"
+}
+```
+
+**outputs.tf**
+
+```markdown
+output "instance_ip_addr" {
+  value = aws_instance.instance_1.public_ip
+}
+```
+
+* Run "**terraform init**" to initialize the local backend.
+
+![image cloud](image/variables.png)
+
+* Run "**terraform plan**" to review the changes.
+
+![image cloud](image/variables1.png)
+
+* Run "**terraform apply**" to apply the changes and provision the resources
+
+![image cloud](image/variables2.png)
+
+* Run "**terraform destroy**" to destroy all the resources 
+
+![image cloud](image/variables3.png)
+
+By using variables in this way, you can deploy multiple copies of a similar but slightly different web application.
+
+## **Additional HCL Features**
+
+Advanced features of the HashiCorp Configuration Language (HCL) used in Terraform. These features can help make your Terraform code more expressive and modular
+
+* [**Expressions, Operators, and Functions**](#expressions,-operators,-and-functions)
+* [**Meta Arguments**](#meta-arguments)
+* [**Provisioners**](#provisioners)
+
+#### **Expressions, Operators, and Functions**
+
+Terraform provides various expressions, operators, and functions to build dynamic strings, perform arithmetic operations, and use built-in functions.
+
+You can find more information in the [Terraform documentation](https://developer.hashicorp.com/terraform/language/functions)
+
+**Some examples include:**
+
+* **Template strings**: Similar to JavaScript, you can use template strings with curly braces to reference variables within a string.
+* **Operators**: Arithmetic and logical operators like multiplication, division, and checking equality are available.
+* **Conditionals**: Ternary syntax can be used for conditional expressions.
+* **For loops**: for loops can be used to loop over a list of configurations.
+* **Splat expressions**: This expands values in a list.
+* **Functions**: Math functions, date and time functions, and hash/crypto functions can be used in your code.
+
+#### **Meta Arguments**
+
+Terraform provides various meta arguments to control the behavior of resources, such as depends_on, count, for_each, and lifecycle.
+
+You can find more information in the [Terraform documentation](https://developer.hashicorp.com/terraform/language/meta-arguments).
+
+* [**depends_on**](#depends-on)
+* [**count**](#count)
+* [**lifecycle**](#lifecycle)
+
+##### **depends on**
+
+* Terraform automatically generatesdependency graph based on references
+* If two resources depend on each other(but not each others data), depends_onspecifies that dependency to enforce ordering
+* For example, if software on the instance needs access to S3, trying to create the aws_instance would fail if attempting to create it before the aws_iam_role_policy
+
+```markdown
+resource "aws_iam_role" "example" {
+  name = "example"
+
+  # assume_role_policy is omitted for brevity in this example. Refer to the
+  # documentation for aws_iam_role for a complete example.
+  assume_role_policy = "..."
+}
+
+resource "aws_iam_instance_profile" "example" {
+  # Because this expression refers to the role, Terraform can infer
+  # automatically that the role must be created first.
+  role = aws_iam_role.example.name
+}
+
+resource "aws_iam_role_policy" "example" {
+  name   = "example"
+  role   = aws_iam_role.example.name
+  policy = jsonencode({
+    "Statement" = [{
+      # This policy allows software running on the EC2 instance to
+      # access the S3 API.
+      "Action" = "s3:*",
+      "Effect" = "Allow",
+    }],
+  })
+}
+
+resource "aws_instance" "example" {
+  ami           = "ami-a1b2c3d4"
+  instance_type = "t2.micro"
+
+  # Terraform can infer from this that the instance profile must
+  # be created before the EC2 instance.
+  iam_instance_profile = aws_iam_instance_profile.example
+
+  # However, if software running in this EC2 instance needs access
+  # to the S3 API in order to boot properly, there is also a "hidden"
+  # dependency on the aws_iam_role_policy that Terraform cannot
+  # automatically infer, so it must be declared explicitly:
+  depends_on = [
+    aws_iam_role_policy.example
+  ]
+}
+```
+
+##### **count**
+
+Use count to create multiple copies of a resource. This is useful when you have nearly identical resources.
+
+```hcl
+resource "aws_instance" "server" {
+  count = 4 # create four similar EC2 instances
+
+  ami           = "ami-a1b2c3d4"
+  instance_type = "t2.micro"
+
+  tags = {
+    Name = "Server ${count.index}"
+  }
+}
+```
+
+##### **for_each**
+
+The `for_each` meta-argument accepts a map or a set of strings, and creates an instance for each item in that map or set. Each instance has a distinct infrastructure object associated with it, and each is separately created, updated, or destroyed when the configuration is applied.
+
+```markdown
+resource "aws_iam_user" "the-accounts" {
+  for_each = toset( ["Todd", "James", "Alice", "Dottie"] )
+  name     = each.key
+}
+```
+
+##### **lifecycle**
+
+The lifecycle meta argument is used to specify the order in which Terraform takes actions, like creating resources before destroying them, or ignoring changes.
+
+```markdown
+resource "aws_instance" "example" {
+
+  # ...
+
+  lifecycle {
+    create_before_destroy = true
+    ignore_changes = [tags]
+    prevent_destroy = true
+  }
+}
+```
+
+#### **Provisioners**
+
+Refere the [link](https://github.com/PadmanabhanSaravanan/Terraform/tree/Terraform-v1/provisioner) for the example
+
+Provisioning mainly deals with configuration activities that happen after the resource is created. It may involve some file operations, executing CLI commands, or even executing the script. Once the resource is successfully initialized, it is ready to accept connections. These connections help Terraform log into the newly created instance and perform these operations.
+
+For more information, refer to the [Terraform documentation on provisioners](https://developer.hashicorp.com/terraform/language/resources/provisioners/syntax).
+
+The diagram below represents various types of provisioners you can implement using Terraform at various stages of provisioning.
+
+![image provisioner](image/terraform-provisioners-diagram.png)
+
+* [**The local-exec Provisioner**](#the-local-exec-provisioner)
+* [**The File Provisioner**](#the-file-provisioner)
+* [**The remote-exec provisioner**](#the-remote-exec-provisioner)
+
+##### **The local exec Provisioner**
+
+The local-exec provisioner works on the Terraform host – where Terraform configuration is applied/executed. It is used to execute any shell command. It is used to set or read environment variables, details about the resource which is created, invoke any process or application, etc.
+
+```markdown
+# main.tf
+
+terraform {
+   required_providers {
+    aws = {
+      source  = "hashicorp/aws"
+      version = "~> 4.16"
+    }
+  }
+
+  required_version = ">= 1.2.0"
+}
+
+provider "aws" {
+  region = "us-east-1"
+}
+
+resource "aws_instance" "my_vm" {
+    ami           = var.ami //Amazon Linux AMI
+    instance_type = var.instance_type
+ 
+    provisioner "local-exec" {
+        command = "echo ${self.private_ip} >> private_ip.txt"
+    }
+
+}
+
+# variables.tf
+variable "ami" {
+  description = "Amazon machine image to use for ec2 instance"
+  type        = string
+  default     = "ami-011899242bb902164" # Ubuntu 20.04 LTS // us-east-1
+}
+
+variable "instance_type" {
+  description = "ec2 instance type"
+  type        = string
+  default     = "t2.micro"
+}
+```
+
+Once this configuration is applied successfully, we find a new file being created in the project directory.
+
+![image](image/terraform-provisioners-create-a-new-file.png)
+
+The contents of the private_ip.txt file are as expected.
+
+![image](image/terraform-provisiones-private_ip.png)
+
+##### **The File Provisioner**
+
+The file provisioner is a way to copy certain files or artifacts from the host machine to target resources that will be created in the future. This is a very handy way to transport certain script files, configuration files, artifacts like .jar files, binaries, etc. when the target resource is created and boots for the first time.
+
+To demonstrate this, we have a file named “letsdotech.txt” which we would like to copy into the home directory of the target EC2 instance. The project directory currently looks like the below. “tfsn.cer” is the private key file we created in the previous section for enabling the Terraform provisioner to SSH into the EC2 instance.
+
+![image](image/terraform-provisioners-tfsn-cer.png)
+
+Terraform configuration for the EC2 instance along with file provisioner looks like below. Various attributes are described in the table that follows.
+
+Download Key pair value save in the folder
+
+```markdown
+# main.tf
+terraform {
+   required_providers {
+    aws = {
+      source  = "hashicorp/aws"
+      version = "~> 4.16"
+    }
+  }
+
+  required_version = ">= 1.2.0"
+}
+
+provider "aws" {
+  region = "us-east-1"
+}
+
+resource "aws_instance" "my_vm" {
+    ami           = var.ami //Amazon Linux AMI
+    instance_type = var.instance_type
+    key_name = "aws_key"
+    vpc_security_group_ids = ["${aws_security_group.webSG.id}"]
+ 
+    provisioner "file" {
+        source      = "letsdotech.txt"
+        destination = "/home/ubuntu/letsdotech.txt"
+        }
+
+    connection {
+        type        = "ssh"
+        host        = self.public_ip
+        user        = "ubuntu"
+        private_key = file("aws_key.pem")
+        timeout     = "4m"
+        }
+}
+
+resource "aws_security_group" "webSG" {
+  name        = "webSG"
+  description = "Allow ssh  inbound traffic"
+
+  ingress {
+    from_port   = 22
+    to_port     = 22
+    protocol    = "tcp"
+    cidr_blocks = ["0.0.0.0/0"]
+  }
+
+  ingress {
+    from_port   = 80
+    to_port     = 80
+    protocol    = "tcp"
+    cidr_blocks = ["0.0.0.0/0"]
+  }
+
+  egress {
+    from_port       = 0
+    to_port         = 0
+    protocol        = "-1"
+    cidr_blocks     = ["0.0.0.0/0"]
+    
+  }
+}
+
+# variables.tf
+variable "ami" {
+  description = "Amazon machine image to use for ec2 instance"
+  type        = string
+  default     = "ami-011899242bb902164" # Ubuntu 20.04 LTS // us-east-1
+}
+
+variable "instance_type" {
+  description = "ec2 instance type"
+  type        = string
+  default     = "t2.micro"
+}
+```
+
+![image](image/console1.PNG)
+
+Also, let us SSH into the EC2 instance and check if the file exists and the contents of the file.
+
+![image](image/console2.PNG)
+
+##### **The remote exec provisioner**
+
+The remote-exec provisioners are similar to local-exec provisioners – where the commands are executed on the target EC2 instance instead of Terraform host. This is accomplished by using the same connection block that is used by the file provisioner.
+
+We use a remote-exec provisioner to run a single command or multiple commands. The example below performs a simple task on the EC2 instance that is created by Terraform. Once the EC2 instance creation is successful, Terraform’s remote-exec provisioner logs in to the instance via SSH and executes the commands specified in the inline attribute array.
+
+```markdown
+# main.tf
+terraform {
+   required_providers {
+    aws = {
+      source  = "hashicorp/aws"
+      version = "~> 4.16"
+    }
+  }
+
+  required_version = ">= 1.2.0"
+}
+
+provider "aws" {
+  region = "us-east-1"
+}
+
+resource "aws_instance" "my_vm" {
+    ami           = var.ami //Amazon Linux AMI
+    instance_type = var.instance_type
+    key_name = "aws_key"
+    vpc_security_group_ids = ["${aws_security_group.webSG.id}"]
+ 
+   provisioner "remote-exec" {
+   inline = [
+     "touch hello.txt",
+     "echo 'Have a great day!' >> hello.txt"
+   ]
+ }
+
+    connection {
+        type        = "ssh"
+        host        = self.public_ip
+        user        = "ubuntu"
+        private_key = file("aws_key.pem")
+        timeout     = "4m"
+        }
+}
+
+resource "aws_security_group" "webSG" {
+  name        = "webSG"
+  description = "Allow ssh  inbound traffic"
+
+  ingress {
+    from_port   = 22
+    to_port     = 22
+    protocol    = "tcp"
+    cidr_blocks = ["0.0.0.0/0"]
+  }
+
+  ingress {
+    from_port   = 80
+    to_port     = 80
+    protocol    = "tcp"
+    cidr_blocks = ["0.0.0.0/0"]
+  }
+
+  egress {
+    from_port       = 0
+    to_port         = 0
+    protocol        = "-1"
+    cidr_blocks     = ["0.0.0.0/0"]
+    
+  }
+}
+# variables.tf
+variable "ami" {
+  description = "Amazon machine image to use for ec2 instance"
+  type        = string
+  default     = "ami-011899242bb902164" # Ubuntu 20.04 LTS // us-east-1
+}
+
+variable "instance_type" {
+  description = "ec2 instance type"
+  type        = string
+  default     = "t2.micro"
+}
+```
+
+![image](image/console3.PNG)
+
+As a result, when we log into the same EC2 instance, we should have a file named “hello.txt” with a message “Have a great day!” in its contents. Let us verify the same.
+
+![image](image/console4.PNG)
+
+## **Terraform Modules**
+
+* [**Terraform Modules (Theory)**](#terraform-modules-theory) <!-- style="font-size:20px" -->
+* [**Terraform Modules (Applied)**](#terraform-modules-applied) <!-- style="font-size:20px" -->
+
+### **Terraform Modules Theory**
+
+**What is a Module?**
+
+* A module is a container for multiple resources defined within your Terraform configuration, bundled in a reusable fashion.
+* Modules consist of a collection of .tf or .tf.json files kept together within a single directory
+
+**Why use Modules?**
+
+* Breaking down the system into different components allows for better organization and specialization within a team.
+* By using modules, infrastructure specialists can define best practices for infrastructure deployment, which can then be consumed by application developers without having to learn the intricacies of Terraform.
+
+![image module](image/module.PNG)
+
+**Types of Modules**
+
+* **Root Module** : The default module consisting of every .tf file in the main working directory.
+* **Child Module** : A separate module referenced from the root module.
+
+**Modules Sources**
+
+* **Local Path** : Reference a module using a relative path.
+
+  ```markdown
+  module "web-app" {
+  source = "../web-app"
+  }
+  ```
+
+* **Terraform Registry** : Reference a module from the Terraform registry.
+
+  ```markdown
+  module "consul" {
+  source = "hashicorp/consul/aws"
+  version = "0.1.0
+  }
+  ```
+
+* **GitHub** : Reference a module using an HTTP or SSH link.
+
+  ```markdown
+  module "example" {
+  source = "github.com/hashicorp/example?ref=v1.2.0"
+  }
+  ```
+
+* **Generic Git Repo** : Reference a module using a URL with a username and password.
+
+  ```markdown
+  module "example" {
+  source = "git::ssh://username@example.com/storage.git"
+  }
+  ```
+
+**Characteristics of a Good Module**
+
+* Raise the abstraction level from the base resource type.
+* Group resources into logical groupings.
+* Expose necessary input variables for customization.
+* Provide useful and usable default values.
+* Return outputs necessary for integration with other systems.
+
+#### **Terraform Registry**
+
+The Terraform registry hosts many different modules associated with various providers, such as AWS.
+
+These modules can serve as a starting point for your projects
+
+![image module](image/registry.png)
+
+![image module](image/registry1.png)
+
+### **Terraform Modules Applied**
+
+To do this, we will break up the configuration into different components:
+
+* compute
+* main
+* variables
+
+Move the resource definitions from the main.tf file to their corresponding .tf files.
+
+![image module](image/console5.PNG)
+
+To consume the module:
+
+* Create a main.tf file in the **web-app** directory to consume the **web-app-module** module
+* Set up the back-end and required providers
+* Define the input variables that the module will consume
+
+**web-app/main.tf**
+
+```markdown
+terraform {
+ required_providers {
+    aws = {
+      source  = "hashicorp/aws"
+      version = "~> 4.16"
+    }
+  }
+
+  required_version = ">= 1.2.0"
+}
+
+provider "aws" {
+  region = "us-east-1"
+}
+
+module "web_app_1" {
+  source = "../web_app_module"
+
+  # Input Variables
+  instance_type    = "t2.micro"
+}
+```
+
+**web-app-module/main.tf** 
+
+```markdown
+terraform {
+   required_providers {
+    aws = {
+      source  = "hashicorp/aws"
+      version = "~> 4.16"
+    }
+  }
+
+  required_version = ">= 1.2.0"
+}
+```
+
+**web-app-module/compute.tf**
+
+```markdown
+resource "aws_instance" "my_ec2_instance" {
+  ami             = var.ami
+  instance_type   = var.instance_type
+  user_data       = <<-EOF
+              #!/bin/bash
+              echo "Hello, World 1" > index.html
+              python3 -m http.server 8080 &
+              EOF
+}
+```
+
+**web-app-module/variables.tf**
+
+```markdown
+# General Variables
+
+variable "region" {
+  description = "Default region for provider"
+  type        = string
+  default     = "us-east-1"
+}
+
+# EC2 Variables
+
+variable "ami" {
+  description = "Amazon machine image to use for ec2 instance"
+  type        = string
+  default     = "ami-011899242bb902164" # Ubuntu 20.04 LTS // us-east-1
+}
+
+variable "instance_type" {
+  description = "ec2 instance type"
+  type        = string
+  default     = "t2.micro"
+}
+```
+
+* Run "**terraform init**" to initialize the local backend.
+
+![image cloud](image/modules.png)
+
+* Run "**terraform plan**" to review the changes.
+
+![image cloud](image/modules1.png)
+
+* Run "**terraform apply**" to apply the changes and provision the resources
+
+![image cloud](image/modules2.png)
+
+* Run "**terraform destroy**" to destroy all the resources 
+
+![image cloud](image/modules3.png)
+
+## **Managing Multiple Environments**
+
+* [**Managing TF Environments**](#managing-tf-environments) <!-- style="font-size:20px" -->
+* [**Using Terraform Workspaces**](#using-terraform-workspaces) <!-- style="font-size:20px" -->
+* [**Using Subdirectory Environments**](#using-subdirectory-environments) <!-- style="font-size:20px" -->
+
+### **Managing TF Environments**
+
+When deploying a web application, you might want to have multiple environments such as production, staging, and development.
+
+![image](image/TF-env.png)
+
+This helps in testing changes, ensuring that the configurations are similar across environments. There are two main approaches to manage multiple environments with Terraform:
+
+* [**Terraform Workspaces**](#terraform-workspaces)
+* [**Separate Subdirectories**](#separate-subdirectories)
+
+#### **Terraform Workspaces**
+
+* [Terraform Workspaces](https://developer.hashicorp.com/terraform/language/state/workspaces#using-workspaces) are a feature that allows you to break your Terraform state into separate configurations.
+* This allows you to manage multiple environments, each with their own unique portion of the state file.
+
+![image](image/TF-env1.png)
+
+**Pros:**
+
+* Easy to get started with.
+* Minimizes code duplication between environments.
+* Convenient as you can reference terraform.workspace as an expression within your Terraform files to populate names of resources.
+
+**Cons:**
+
+* Can be dangerous if you accidentally apply changes to the wrong environment.
+* State files are stored within the same remote back end, making permissioning and access challenging.
+* Cannot easily determine the deployed state by simply looking at the codebase.
+
+#### **Separate Subdirectories**
+
+The alternative to using workspaces, is to define separate environments as separate directories within the filesystem. You have one directory (and its children) for each environment you plan to deploy.
+
+![image](image/TF-env2.png)
+
+**Pros:**
+
+* Isolates back ends, allowing for separate back-end configurations and improved security.
+* Decreases potential for human error as environments are managed separately.
+* The codebase fully represents the deployed state, making it easier to understand.
+
+**Cons:**
+
+* Requires navigating between subdirectories to apply changes to each environment.
+* More code duplication as each **main.tf** file represents a similar configuration.
+
+### **Using Terraform Workspaces**
+
+In Terraform Cloud, workspaces are managed within the Terraform Cloud UI, and each workspace corresponds to a separate environment or configuration. The state management is handled by Terraform Cloud itself, eliminating the need to use workspaces explicitly.
+
+**Defining the Root Module**
+
+**1.** Create a new directory called workspace. This directory will contain the **main.tf** file for the Terraform workspace implementation.
+
+**main.tf**
+
+> Use S3 backent to store the state file
+
+```markdown
+terraform {
+  backend "s3" {
+     bucket         = "<bucket-name>"  #replace with the bucket-name-created
+     key            = "terraform.tfstate" 
+     region         = "us-east-1"
+     dynamodb_table = "<dynamo-tablename>"  #replace with your dynamotable name
+     encrypt        = true
+   }
+
+ required_providers {
+    aws = {
+      source  = "hashicorp/aws"
+      version = "~> 4.16"
+    }
+  }
+  required_version = ">= 1.2.0"
+}
+
+provider "aws" {
+  region = "us-east-1"
+}
+
+module "web_app_1" {
+  source = "../modules/web_app_module"
+
+  # Input Variables
+  instance_type    = "t2.micro"
+}
+```
+
+> Use the previous module files for this infrastructure.
+
+**Creating Production and Staging Environments**
+
+**1.** Initialize Terraform using `terraform init`.
+
+![image env](image/workspace.PNG)
+
+**2.** Create a new environment called "production" using the command `terraform workspace new production`. To verify the creation, use `terraform workspace list`.
+
+![image env](image/workspace1.PNG)
+
+**3.** Deploy the environment using `terraform apply`.
+
+![image env](image/workspace2.PNG)
+
+**4.** Once the production environment is created, create another environment called "staging" using `terraform workspace new staging`.
+
+![image env](image/workspace3.PNG)
+
+**5.** Deploy the staging environment using `terraform apply`.
+
+![image env](image/workspace4.PNG)
+
+**6.** As a result, two copies of the web application will be running, one at  production and the other at staging.
+
+![image env](image/workspace5.PNG)
+
+**Cleanup**
+
+**1.** To avoid incurring additional costs by leaving the infrastructure running, you can destroy destroy both environments using the terraform destroy command.
+
+**2.** You will need ot switch to each environment using the `terraform workspace select WORKSPACE_NAME` followed by `terraform destroy`
+
+![image env](image/workspace6.PNG)
+
+![image env](image/workspace7.PNG)
+
+### **Using Subdirectory Environments**
+
+* We will create two environments, production and staging, and deploy the web application to both environments using a directory layout approach.
+
+* Create a two new subdirectories: **production**, and **staging**.
+
+![image fileStructure](image/fileStructure.PNG)
+
+In both the production and staging directories, create a main.tf file defining the options for the module being deployed.
+
+```markdown
+These files will be similar to the previous examples
+
+terraform {
+  backend "s3" {
+     bucket         = "<bucket-name>"  #replace with the bucket-name-created
+     key            = "terraform.tfstate" 
+     region         = "us-east-1"
+     dynamodb_table = "<dynamo-tablename>"  #replace with your dynamotable name
+     encrypt        = true
+   }
+
+ required_providers {
+    aws = {
+      source  = "hashicorp/aws"
+      version = "~> 4.16"
+    }
+  }
+  required_version = ">= 1.2.0"
+}
+
+provider "aws" {
+  region = "us-east-1"
+}
+
+module "web_app_1" {
+  source = "../modules/web_app_module"
+
+  # Input Variables
+  instance_type    = "t2.micro"
+}
+```
+
+> Use the previous module files for this infrastructure.
+
+**Deploying the Environments**
+
+**1.** Navigate to the **production** directory, initialize Terraform using `terraform init`, and apply the configuration using `terraform apply`. This will deploy the production environment.
+
+![image fileStructure](image/fileStructure1.PNG)
+
+![image fileStructure](image/fileStructure2.PNG)
+
+**2.** Navigate to the **staging** directory, initialize Terraform using `terraform init`, and apply the configuration using `terraform apply`. This will deploy the staging environment.
+
+![image fileStructure](image/fileStructure3.PNG)
+
+![image fileStructure](image/fileStructure2.PNG)
+
+**3.** To avoid incurring additional costs by leaving the infrastructure running, you can destroy destroy both environments using the terraform destroy command.
+
+**Advantages and Disadvantages of the Subdirectories Approach**
+
+**Advantages:**
+
+* Clear organization of environments in the file structure.
+* Easier to reason about the actual infrastructure deployed.
+
+**Disadvantages:**
+
+* More code repetition, as each environment has its own main.tf file.
+* Some limitations in templating the backend provider, leading to hardcoding values.
+
+## **Testing Terraform Code**
+
+The importance of testing your Terraform code to ensure that your infrastructure-as-code configurations maintain high quality and continue to perform as expected.
+
+**Code Rot**
+
+Code rot refers to the gradual degradation of a codebase over time due to external dependencies changing, other changes in the codebase impacting specific functions, or unapplied changes. In the context of Terraform and infrastructure, code rot may occur due to:
+
+* Out-of-band changes.
+* Unpinned versions of providers.
+* Deprecated external modules or resource types.
+* Unapplied changes to Terraform configurations.
+
+**Preventing Code Rot with Testing**
+
+To prevent code rot, we can perform various types of tests on our Terraform code:
+
+1. **Static checks**: Run built-in Terraform commands like `terraform fmt`, `terraform validate`, and `terraform plan` to check the formatting, validate configurations, and compare the desired state with the actual state, respectively. Use custom validation rules to further validate your infrastructure configurations.
+
+2. **Third-party tools**: Use tools like **tflint**, **checkov**, **tfsec**, and **terrascan** to perform additional checks on your codebase. Terraform Sentinel, available only for enterprise customers, provides security and compliance guarantees.
+
+3. **Manual testing**: Follow the standard Terraform workflow, running `terraform init`, `terraform apply`, and `terraform destroy` to test your configuration manually.
+
+4. **Automated testing**: Automate the manual testing steps using a shell script or a more robust method, such as utilizing a testing framework like TerraTest with Go to write complex tests and make assertions about your infrastructure.
+
+**Static Checks**
+
+These checks are not tests, but they are useful for analyzing the codebase.
+
+**1.** **terraform fmt**: Formats your code according to Terraform's opinionated formatting structure. This can be used in continuous integration to enforce a consistent style guide.
+
+![format](image/fmt.PNG)
+
+* `terraform fmt --check` command is used to check the formatting structure
+* `terraform fmt` is used to formats your code according to Terraform's opinionated formatting structure
+
+**2.** **terraform validate**: Checks if your code is a valid Terraform configuration.
+
+![validate](image/validate.PNG)
+
+* **Custom validation rules**: Use the variable block to enforce certain conditions for variables. For example, enforce a minimum length for a password.
+* **Third-party tools**: Use third-party tools to scan Terraform configurations for correctness, security, and compliance.
+
+## **Developer Workflows**
+
+**Workflow for Terraform Developers**
+
+1. Write and update Terraform code.
+
+2. Test the changes locally in a development environment.
+
+3. Create a pull request (PR) in a version control system (e.g., GitHub).
+
+4. Have a colleague review the PR and suggest improvements.
+
+5. Run tests within a continuous integration (CI) system (e.g., GitHub Actions).
+
+6. If tests pass, merge the PR into the main branch.
+
+7. Use an automated pipeline in the CI/CD tool to deploy the changes to the staging environment.
+
+8. Deploy the changes to production when tagging a new release.
+
+## **Create Users Example**
+
+**Step1** Create a file named main.tf & variables.tf with the following content
+
+```markdown
+# main.tf
+
+terraform {
+   required_providers {
+    aws = {
+      source  = "hashicorp/aws"
+      version = "~> 4.16"
+    }
+  }
+
+  required_version = ">= 1.2.0"
+}
+
+provider "aws" {
+  region = "us-east-1"
+  profile = "default"
+}
+
+# Create an User profile
+
+resource "aws_iam_user" "user" {
+  name = var.aws_user_name
+}
+
+# Attach the IAM policy to the user
+resource "aws_iam_policy_attachment" "attach_user" {
+  name       = "aws_iam_policy_attachment"
+  users      = [aws_iam_user.user.name]
+  policy_arn = var.user_policy
+}
+```
+
+```markdown
+# variable.tf
+variable "aws_user_name"{
+    default     = "terraform_user_1"
+    description = "enter the name"
+    type        = string
+}
+
+variable "user_policy"{
+  description   = "ARN of policy to be associated with the created IAM user"
+  type          = string
+  default       = "arn:aws:iam::aws:policy/AmazonEC2FullAccess"
+}
+```
+
+**Using Terraform Commands:**
+
+* Initialize Terraform in the directory containing main.tf by running **terraform init**. This sets up the backend and state storage.
+
+![image init](image/user.PNG)
+
+* Run **terraform plan** to view the changes Terraform will make to your infrastructure.
+
+![image init](image/user1.PNG)
+
+* Run **terraform apply** to create the specified resources. Confirm the action when prompted.
+
+![image init](image/user2.PNG)
+
+* To clean up resources and avoid unnecessary costs, run **terraform destroy** and confirm the action when prompted.
+
+## **Sample Application Walkthrough**
+
+**Step1** : Set up your Terraform Backend
+
+Choose between Terraform Cloud, AWS S3 + DynamoDB, or a local backend. 
+
+**Step2** : Create a main.tf file and configure the backend definition:
+
+```markdown
+terraform {
+  required_providers {
+    aws = {
+      source  = "hashicorp/aws"
+      version = "~> 4.16"
+    }
+  }
+
+  required_version = ">= 1.2.0"
 }
 ```
 
@@ -629,17 +1847,6 @@ terraform {
 You should specify the version as well as the AWS region you want the provider to operate in.
 
 ```markdown
-terraform {
-  ...
-
-  required_providers {
-    aws = {
-      source  = "hashicorp/aws"
-      version = "~> 3.0"
-    }
-  }
-}
-
 provider "aws" {
   region  = "us-east-1"
   profile = "default"
@@ -890,987 +2097,8 @@ Access the load balancer's DNS name or your domain to check if the instances are
 
 Run **terraform destroy** to clean up the resources and avoid incurring additional costs.
 
-## **Variables and Outputs**
-
-* [**Variables and Outputs (Theory)**](#variables-and-outputs-theory) <!-- style="font-size:20px" -->
-* [**Variables and Outputs (Applied)**](#variables-and-outputs-applied) <!-- style="font-size:20px" -->
-
-### **Variables and Outputs Theory**
-
-Terraform variables and outputs enable more flexible and modular code by breaking out hard-coded values.
-
-* [**Types of Variables**](#types-of-variables)
-* [**Setting Input Variables**](#setting-input-variables)
-* [**Variable Value Types**](#variable-value-types)
-* [**Handling Sensitive Data**](#handling-sensitive-data)
-
-#### **Types of Variables**
-
-**1.** **Input Variables** : Input variables are like input parameters or arguments for a function. They are referenced using var.name. To declare an input variable, use the following syntax:
-
-```markdown
-variable "instance_type" {
-  type = string
-  default = "t2.micro"
-}
-```
-
-You can find more information in the [Terraform documentation](https://developer.hashicorp.com/terraform/language/values/variables)
-
-**2.** **Local Variables** : Local variables are like temporary variables within the scope of a function. They are referenced using local.name, and declared with locals (plural). For example:
-
-```markdown
-locals {
-  service_name = "example-service"
-  owner = "your_name"
-}
-```
-
-You can find more information in the [Terraform documentation](https://developer.hashicorp.com/terraform/language/values/locals)
-
-**3.** **Output Variables** : Output variables are like the return values of a function. They allow bundling multiple Terraform configurations together. To declare an output variable, use the following syntax:
-
-```markdown
-output "instance_ip" {
-  value = aws_instance.example.public_ip
-}
-```
-
-You can find more information in the [Terraform documentation](https://developer.hashicorp.com/terraform/language/values/outputs)
-
-#### **Setting Input Variables**
-
-Input variables can be set in several ways, ranked in order of precedence from lowest to highest:
-
-1. **Terraform CLI prompts** : If you don't specify a variable anywhere and there's no default value, the Terraform CLI will prompt you for a value.
-2. **Default value in the block** : You can specify a default value when declaring the variable.
-3. **Environment variables** : Use the prefix **TF_VAR_** followed by the variable name.
-4. **Terraform .tfvars files** : Store values in **.tfvars** files.
-5. **Auto-applied .auto.tfvars files** : These files will be applied over the **.tfvars** files.
-6. **-var or -var-file options** : Pass values when issuing the terraform plan or terraform apply commands.
-
-#### **Variable Value Types**
-
-Variables can hold different value types:
-
-* **Primitive types**: string, number, or boolean.
-* **Complex types**: lists, sets, maps, etc.
-
-Type checking happens automatically in Terraform. You can also write your own validation rules.
-
-#### **Handling Sensitive Data**
-
-When using sensitive data in variables, like a database password, add the **sensitive = true** attribute when defining the variable. This will cause those data to be masked in the Terraform plan output to prevent leaking credentials.
-
-Also, avoid storing sensitive data in files, and consider using these options for passing in those data:
-
-* environment Variables
-* -var command
-* external secret stores like AWS Secrets Manager or HashiCorp Vault.
-
-### **Variables and Outputs Applied**
-
-Refere to the [link](https://github.com/PadmanabhanSaravanan/Terraform/tree/Terraform-v1/Variables%20%26%20Outputs) for the example
-
-**1.** **Local Variables** : Declare local variables in your main.tf file to define values that are scoped within the project and reused throughout the configuration (but cannot be passed in at runtime):
-
-```markdown
-locals {
-  example_variable = "example_value"
-}
-```
-
-**2.** **Input Variables:** Define input variables in a separate **variables.tf** file or within your **main.tf** file. These variables allow you to configure and change values at runtime.
-
-For example, we can define the following variables associated with our EC2 instacnes:
-
-```markdown
-variable "ami" {
-  description = "Amazon machine image to use for ec2 instance"
-  type        = string
-  default     = "ami-011899242bb902164" # Ubuntu 20.04 LTS // us-east-1
-}
-
-variable "instance_type" {
-  description = "ec2 instance type"
-  type        = string
-  default     = "t2.micro"
-}
-```
-
-We can do the same for many other values used throughout our configuration to make it more flexible. click on the [link](https://github.com/PadmanabhanSaravanan/Terraform/blob/Terraform-v1/Variables%20%26%20Outputs/variables.tf) for examples.
-
-After defining the variables, we then reference them within the resource configuration using **var.VARIABLE_NAME**:
-
-```markdown
-resource "aws_instance" "instance_1" {
-  ami             = var.ami
-  instance_type   = var.instance_type
-  security_groups = [aws_security_group.instances.name]
-  user_data       = <<-EOF
-              #!/bin/bash
-              echo "Hello, World 1" > index.html
-              python3 -m http.server 8080 &
-              EOF
-}
-```
-
-**3.** **TFVars Files**: Create a **terraform.tfvars** file to store non-sensitive values for your input variables:
-
-```markdown
-bucket_prefix = "devops-directive-web-app-data"
-domain        = "devopsdeployed.com"
-db_name       = "mydb"
-db_user       = "foo"
-# For sensitive variables, pass them at runtime instead of storing them in the .tfvars file.
-# db_pass = "foobarbaz"
-```
-
-**4.** **Outputs**: Add output variables to your configuration to provide access to important information such as IP addresses:
-
-```markdown
-output "instance_1_ip_addr" {
-  value = aws_instance.instance_1.public_ip
-}
-```
-
-**5.** **Deploy Configuration**: Perform the usual terraform init, terraform plan, and terraform apply steps to provision the infrastructure.
-
-```markdown
-terraform apply -var "db_user=my_user" -var "db_pass=something_super_secure"
-```
-
-By using variables in this way, you can deploy multiple copies of a similar but slightly different web application.
-
-Additionally, you can create staging and production environments simply by configuring different variable values within your terraform.tfvars file.
-
-Remember not to store sensitive values like passwords in your .tfvars file; instead, pass them at runtime or use an external secrets manager.
-
-## **Additional HCL Features**
-
-Advanced features of the HashiCorp Configuration Language (HCL) used in Terraform. These features can help make your Terraform code more expressive and modular
-
-* [**Expressions, Operators, and Functions**](#expressions,-operators,-and-functions)
-* [**Meta Arguments**](#meta-arguments)
-* [**Provisioners**](#provisioners)
-
-#### **Expressions, Operators, and Functions**
-
-Terraform provides various expressions, operators, and functions to build dynamic strings, perform arithmetic operations, and use built-in functions.
-
-You can find more information in the [Terraform documentation](https://developer.hashicorp.com/terraform/language/functions)
-
-**Some examples include:**
-
-* **Template strings**: Similar to JavaScript, you can use template strings with curly braces to reference variables within a string.
-* **Operators**: Arithmetic and logical operators like multiplication, division, and checking equality are available.
-* **Conditionals**: Ternary syntax can be used for conditional expressions.
-* **For loops**: for loops can be used to loop over a list of configurations.
-* **Splat expressions**: This expands values in a list.
-* **Functions**: Math functions, date and time functions, and hash/crypto functions can be used in your code.
-
-#### **Meta Arguments**
-
-Terraform provides various meta arguments to control the behavior of resources, such as depends_on, count, for_each, and lifecycle.
-
-You can find more information in the [Terraform documentation](https://developer.hashicorp.com/terraform/language/meta-arguments).
-
-* [**depends_on**](#depends-on)
-* [**count**](#count)
-* [**lifecycle**](#lifecycle)
-
-##### **depends on**
-
-* Terraform automatically generatesdependency graph based on references
-* If two resources depend on each other(but not each others data), depends_onspecifies that dependency to enforce ordering
-* For example, if software on the instance needs access to S3, trying to create the aws_instance would fail if attempting to create it before the aws_iam_role_policy
-
-```markdown
-resource "aws_iam_role" "example" {
-  name = "example"
-
-  # assume_role_policy is omitted for brevity in this example. Refer to the
-  # documentation for aws_iam_role for a complete example.
-  assume_role_policy = "..."
-}
-
-resource "aws_iam_instance_profile" "example" {
-  # Because this expression refers to the role, Terraform can infer
-  # automatically that the role must be created first.
-  role = aws_iam_role.example.name
-}
-
-resource "aws_iam_role_policy" "example" {
-  name   = "example"
-  role   = aws_iam_role.example.name
-  policy = jsonencode({
-    "Statement" = [{
-      # This policy allows software running on the EC2 instance to
-      # access the S3 API.
-      "Action" = "s3:*",
-      "Effect" = "Allow",
-    }],
-  })
-}
-
-resource "aws_instance" "example" {
-  ami           = "ami-a1b2c3d4"
-  instance_type = "t2.micro"
-
-  # Terraform can infer from this that the instance profile must
-  # be created before the EC2 instance.
-  iam_instance_profile = aws_iam_instance_profile.example
-
-  # However, if software running in this EC2 instance needs access
-  # to the S3 API in order to boot properly, there is also a "hidden"
-  # dependency on the aws_iam_role_policy that Terraform cannot
-  # automatically infer, so it must be declared explicitly:
-  depends_on = [
-    aws_iam_role_policy.example
-  ]
-}
-```
-
-##### **count**
-
-Use count to create multiple copies of a resource. This is useful when you have nearly identical resources.
-
-```hcl
-resource "aws_instance" "server" {
-  count = 4 # create four similar EC2 instances
-
-  ami           = "ami-a1b2c3d4"
-  instance_type = "t2.micro"
-
-  tags = {
-    Name = "Server ${count.index}"
-  }
-}
-```
-
-##### **for_each**
-
-The `for_each` meta-argument accepts a map or a set of strings, and creates an instance for each item in that map or set. Each instance has a distinct infrastructure object associated with it, and each is separately created, updated, or destroyed when the configuration is applied.
-
-```markdown
-resource "aws_iam_user" "the-accounts" {
-  for_each = toset( ["Todd", "James", "Alice", "Dottie"] )
-  name     = each.key
-}
-```
-
-##### **lifecycle**
-
-The lifecycle meta argument is used to specify the order in which Terraform takes actions, like creating resources before destroying them, or ignoring changes.
-
-```markdown
-resource "aws_instance" "example" {
-
-  # ...
-
-  lifecycle {
-    create_before_destroy = true
-    ignore_changes = [tags]
-    prevent_destroy = true
-  }
-}
-```
-
-#### **Provisioners**
-
-Refere the [link](https://github.com/PadmanabhanSaravanan/Terraform/tree/Terraform-v1/provisioner) for the example
-
-Provisioning mainly deals with configuration activities that happen after the resource is created. It may involve some file operations, executing CLI commands, or even executing the script. Once the resource is successfully initialized, it is ready to accept connections. These connections help Terraform log into the newly created instance and perform these operations.
-
-For more information, refer to the [Terraform documentation on provisioners](https://developer.hashicorp.com/terraform/language/resources/provisioners/syntax).
-
-The diagram below represents various types of provisioners you can implement using Terraform at various stages of provisioning.
-
-![image provisioner](image/terraform-provisioners-diagram.png)
-
-* [**The local-exec Provisioner**](#the-local-exec-provisioner)
-* [**The File Provisioner**](#the-file-provisioner)
-* [**The remote-exec provisioner**](#the-remote-exec-provisioner)
-
-##### **The local exec Provisioner**
-
-The local-exec provisioner works on the Terraform host – where Terraform configuration is applied/executed. It is used to execute any shell command. It is used to set or read environment variables, details about the resource which is created, invoke any process or application, etc.
-
-```markdown
-# main.tf
-
-terraform {
-  required_providers {
-    aws = {
-      source  = "hashicorp/aws"
-      version = "~> 3.0"
-    }
-  }
-}
-
-provider "aws" {
-  region = "us-east-1"
-}
-
-resource "aws_instance" "my_vm" {
-    ami           = var.ami //Amazon Linux AMI
-    instance_type = var.instance_type
- 
-    provisioner "local-exec" {
-        command = "echo ${self.private_ip} >> private_ip.txt"
-    }
-
-}
-
-# variables.tf
-variable "ami" {
-  description = "Amazon machine image to use for ec2 instance"
-  type        = string
-  default     = "ami-011899242bb902164" # Ubuntu 20.04 LTS // us-east-1
-}
-
-variable "instance_type" {
-  description = "ec2 instance type"
-  type        = string
-  default     = "t2.micro"
-}
-```
-
-Once this configuration is applied successfully, we find a new file being created in the project directory.
-
-![image](image/terraform-provisioners-create-a-new-file.png)
-
-The contents of the private_ip.txt file are as expected.
-
-![image](image/terraform-provisiones-private_ip.png)
-
-##### **The File Provisioner**
-
-The file provisioner is a way to copy certain files or artifacts from the host machine to target resources that will be created in the future. This is a very handy way to transport certain script files, configuration files, artifacts like .jar files, binaries, etc. when the target resource is created and boots for the first time.
-
-To demonstrate this, we have a file named “letsdotech.txt” which we would like to copy into the home directory of the target EC2 instance. The project directory currently looks like the below. “tfsn.cer” is the private key file we created in the previous section for enabling the Terraform provisioner to SSH into the EC2 instance.
-
-![image](image/terraform-provisioners-tfsn-cer.png)
-
-Terraform configuration for the EC2 instance along with file provisioner looks like below. Various attributes are described in the table that follows.
-
-Download Key pair value save in the folder
-
-```markdown
-# main.tf
-terraform {
-  required_providers {
-    aws = {
-      source  = "hashicorp/aws"
-      version = "~> 3.0"
-    }
-  }
-}
-
-provider "aws" {
-  region = "us-east-1"
-}
-
-resource "aws_instance" "my_vm" {
-    ami           = var.ami //Amazon Linux AMI
-    instance_type = var.instance_type
-    key_name = "aws_key"
-    vpc_security_group_ids = ["${aws_security_group.webSG.id}"]
- 
-    provisioner "file" {
-        source      = "letsdotech.txt"
-        destination = "/home/ubuntu/letsdotech.txt"
-        }
-
-    connection {
-        type        = "ssh"
-        host        = self.public_ip
-        user        = "ubuntu"
-        private_key = file("aws_key.pem")
-        timeout     = "4m"
-        }
-}
-
-resource "aws_security_group" "webSG" {
-  name        = "webSG"
-  description = "Allow ssh  inbound traffic"
-
-  ingress {
-    from_port   = 22
-    to_port     = 22
-    protocol    = "tcp"
-    cidr_blocks = ["0.0.0.0/0"]
-  }
-
-  ingress {
-    from_port   = 80
-    to_port     = 80
-    protocol    = "tcp"
-    cidr_blocks = ["0.0.0.0/0"]
-  }
-
-  egress {
-    from_port       = 0
-    to_port         = 0
-    protocol        = "-1"
-    cidr_blocks     = ["0.0.0.0/0"]
-    
-  }
-}
-
-# variables.tf
-variable "ami" {
-  description = "Amazon machine image to use for ec2 instance"
-  type        = string
-  default     = "ami-011899242bb902164" # Ubuntu 20.04 LTS // us-east-1
-}
-
-variable "instance_type" {
-  description = "ec2 instance type"
-  type        = string
-  default     = "t2.micro"
-}
-```
-
-![image](image/console1.PNG)
-
-Also, let us SSH into the EC2 instance and check if the file exists and the contents of the file.
-
-![image](image/console2.PNG)
-
-##### **The remote exec provisioner**
-
-The remote-exec provisioners are similar to local-exec provisioners – where the commands are executed on the target EC2 instance instead of Terraform host. This is accomplished by using the same connection block that is used by the file provisioner.
-
-We use a remote-exec provisioner to run a single command or multiple commands. The example below performs a simple task on the EC2 instance that is created by Terraform. Once the EC2 instance creation is successful, Terraform’s remote-exec provisioner logs in to the instance via SSH and executes the commands specified in the inline attribute array.
-
-```markdown
-# main.tf
-terraform {
-  required_providers {
-    aws = {
-      source  = "hashicorp/aws"
-      version = "~> 3.0"
-    }
-  }
-}
-
-provider "aws" {
-  region = "us-east-1"
-}
-
-resource "aws_instance" "my_vm" {
-    ami           = var.ami //Amazon Linux AMI
-    instance_type = var.instance_type
-    key_name = "aws_key"
-    vpc_security_group_ids = ["${aws_security_group.webSG.id}"]
- 
-   provisioner "remote-exec" {
-   inline = [
-     "touch hello.txt",
-     "echo 'Have a great day!' >> hello.txt"
-   ]
- }
-
-    connection {
-        type        = "ssh"
-        host        = self.public_ip
-        user        = "ubuntu"
-        private_key = file("aws_key.pem")
-        timeout     = "4m"
-        }
-}
-
-resource "aws_security_group" "webSG" {
-  name        = "webSG"
-  description = "Allow ssh  inbound traffic"
-
-  ingress {
-    from_port   = 22
-    to_port     = 22
-    protocol    = "tcp"
-    cidr_blocks = ["0.0.0.0/0"]
-  }
-
-  ingress {
-    from_port   = 80
-    to_port     = 80
-    protocol    = "tcp"
-    cidr_blocks = ["0.0.0.0/0"]
-  }
-
-  egress {
-    from_port       = 0
-    to_port         = 0
-    protocol        = "-1"
-    cidr_blocks     = ["0.0.0.0/0"]
-    
-  }
-}
-# variables.tf
-variable "ami" {
-  description = "Amazon machine image to use for ec2 instance"
-  type        = string
-  default     = "ami-011899242bb902164" # Ubuntu 20.04 LTS // us-east-1
-}
-
-variable "instance_type" {
-  description = "ec2 instance type"
-  type        = string
-  default     = "t2.micro"
-}
-```
-
-![image](image/console3.PNG)
-
-As a result, when we log into the same EC2 instance, we should have a file named “hello.txt” with a message “Have a great day!” in its contents. Let us verify the same.
-
-![image](image/console4.PNG)
-
-## **Create Users Example**
-
-Refere to the [link](https://github.com/PadmanabhanSaravanan/Terraform/tree/Terraform-v1/creating-user) for the example
-
-**Step1** Create a file named main.tf & variables.tf with the following content
-
-```markdown
-# main.tf
-
-terraform {
-  backend "local" {
-    path = "./creating_user/terraform.tfstate"
-  }
-  
-
-  required_providers {
-    aws = {
-      source  = "hashicorp/aws"
-      version = "~> 3.0"
-    }
-  }
-}
-
-provider "aws" {
-  region = "us-east-1"
-  profile = "default"
-}
-
-# Create an User profile
-
-resource "aws_iam_user" "user" {
-  name = var.aws_user_name
-}
-
-# Attach the IAM policy to the user
-resource "aws_iam_policy_attachment" "attach_user" {
-  name       = "aws_iam_policy_attachment"
-  users      = [aws_iam_user.user.name]
-  policy_arn = var.user_policy
-}
-```
-
-```markdown
-# variable.tf
-variable "aws_user_name"{
-    default     = "terraform_user_1"
-    description = "enter the name"
-    type        = string
-}
-
-variable "user_policy"{
-  description   = "ARN of policy to be associated with the created IAM user"
-  type          = string
-  default       = "arn:aws:iam::aws:policy/AmazonEC2FullAccess"
-}
-```
-
-**Using Terraform Commands:**
-
-* Initialize Terraform in the directory containing main.tf by running **terraform init**. This sets up the backend and state storage.
-
-![image init](image/user.PNG)
-
-* Run **terraform plan** to view the changes Terraform will make to your infrastructure.
-
-![image init](image/user1.PNG)
-
-* Run **terraform apply** to create the specified resources. Confirm the action when prompted.
-
-![image init](image/user2.PNG)
-
-* To clean up resources and avoid unnecessary costs, run **terraform destroy** and confirm the action when prompted.
-
-## **Terraform Modules**
-
-* [**Terraform Modules (Theory)**](#terraform-modules-theory) <!-- style="font-size:20px" -->
-* [**Terraform Modules (Applied)**](#terraform-modules-applied) <!-- style="font-size:20px" -->
-
-### **Terraform Modules Theory**
-
-**What is a Module?**
-
-* A module is a container for multiple resources defined within your Terraform configuration, bundled in a reusable fashion.
-* Modules consist of a collection of .tf or .tf.json files kept together within a single directory
-
-**Why use Modules?**
-
-* Breaking down the system into different components allows for better organization and specialization within a team.
-* By using modules, infrastructure specialists can define best practices for infrastructure deployment, which can then be consumed by application developers without having to learn the intricacies of Terraform.
-
-![image module](image/module.PNG)
-
-**Types of Modules**
-
-* **Root Module** : The default module consisting of every .tf file in the main working directory.
-* **Child Module** : A separate module referenced from the root module.
-
-**Modules Sources**
-
-* **Local Path** : Reference a module using a relative path.
-
-  ```markdown
-  module "web-app" {
-  source = "../web-app"
-  }
-  ```
-
-* **Terraform Registry** : Reference a module from the Terraform registry.
-
-  ```markdown
-  module "consul" {
-  source = "hashicorp/consul/aws"
-  version = "0.1.0
-  }
-  ```
-
-* **GitHub** : Reference a module using an HTTP or SSH link.
-
-  ```markdown
-  module "example" {
-  source = "github.com/hashicorp/example?ref=v1.2.0"
-  }
-  ```
-
-* **Generic Git Repo** : Reference a module using a URL with a username and password.
-
-  ```markdown
-  module "example" {
-  source = "git::ssh://username@example.com/storage.git"
-  }
-  ```
-
-**Characteristics of a Good Module**
-
-* Raise the abstraction level from the base resource type.
-* Group resources into logical groupings.
-* Expose necessary input variables for customization.
-* Provide useful and usable default values.
-* Return outputs necessary for integration with other systems.
-
-#### **Terraform Registry**
-
-The Terraform registry hosts many different modules associated with various providers, such as AWS.
-
-These modules can serve as a starting point for your projects
-
-![image module](image/registry.png)
-
-![image module](image/registry1.png)
-
-### **Terraform Modules Applied**
-
-Refere the [link](https://github.com/PadmanabhanSaravanan/Terraform/tree/Terraform-v1/organization-and-modules) for the example
-
-we will demonstrate how to refactor our example web application configuration using Terraform modules.
-
-To do this, we will break up the configuration into different components:
-
-* compute
-* database
-* storage
-* networking.
-
-Move the resource definitions from the main.tf file to their corresponding .tf files.
-
-![image module](image/console5.PNG)
-
-To consume the module:
-
-* Create a main.tf file in the **web-app** directory to consume the **web-app-module** module
-* Set up the back-end and required providers
-* Define the input variables that the module will consume
-
-```markdown
-terraform {
-  # Assumes s3 bucket and dynamo DB table already set up
-  backend "s3" {
-    bucket         = "devops-directive-tf-state-config"
-    key            = "organization-and-modules/web-app/terraform.tfstate"
-    region         = "us-east-1"
-    dynamodb_table = "terraform-state-locking"
-    encrypt        = true
-  }
-
-  required_providers {
-    aws = {
-      source  = "hashicorp/aws"
-      version = "~> 3.0"
-    }
-  }
-}
-
-provider "aws" {
-  region = "us-east-1"
-}
-
-variable "db_pass_1" {
-  description = "password for database #1"
-  type        = string
-  sensitive   = true
-}
-
-variable "db_pass_2" {
-  description = "password for database #2"
-  type        = string
-  sensitive   = true
-}
-
-module "web_app_1" {
-  source = "../web-app-module"
-
-  # Input Variables
-  bucket_prefix    = "web-app-1-data"
-  domain           = "devopsdeployed.com"
-  app_name         = "web-app-1"
-  environment_name = "production"
-  instance_type    = "t2.micro"
-  create_dns_zone  = true
-  db_name          = "webapp1db"
-  db_user          = "foo"
-  db_pass          = var.db_pass_1
-}
-
-module "web_app_2" {
-  source = "../web-app-module"
-
-  # Input Variables
-  bucket_prefix    = "web-app-2-data"
-  domain           = "anotherdevopsdeployed.com"
-  app_name         = "web-app-2"
-  environment_name = "production"
-  instance_type    = "t2.micro"
-  create_dns_zone  = true
-  db_name          = "webapp2db"
-  db_user          = "bar"
-  db_pass          = var.db_pass_2
-}
-```
-
-By using these two module blocks, we can easily deploy two copies of the web application with slightly different configurations.
-
-When running **terraform apply**, you will be prompted to enter the values for db_pass_1 and db_pass_2. Once the apply is complete, you will have two copies of the web application running across four EC2 instances in AWS.
-
-Finally, run terraform destroy to clean up the resources created during this lesson.
-
-Now that you have seen how to refactor your Terraform code into different sections, parameterize it with variables, and abstract complexity using modules, you can efficiently provision multiple instances of the web application with different configurations.
-
-## **Managing Multiple Environments**
-
-* [**Managing TF Environments**](#managing-tf-environments) <!-- style="font-size:20px" -->
-* [**Using Terraform Workspaces**](#using-terraform-workspaces) <!-- style="font-size:20px" -->
-* [**Using Subdirectory Environments**](#using-subdirectory-environments) <!-- style="font-size:20px" -->
-
-### **Managing TF Environments**
-
-When deploying a web application, you might want to have multiple environments such as production, staging, and development.
-
-![image](image/TF-env.png)
-
-This helps in testing changes, ensuring that the configurations are similar across environments. There are two main approaches to manage multiple environments with Terraform:
-
-* [**Terraform Workspaces**](#terraform-workspaces)
-* [**Separate Subdirectories**](#separate-subdirectories)
-
-Refere the [link](https://github.com/PadmanabhanSaravanan/Terraform/tree/Terraform-v1/managing-multiple-environments) for the example
-
-#### **Terraform Workspaces**
-
-* [Terraform Workspaces](https://developer.hashicorp.com/terraform/language/state/workspaces#using-workspaces) are a feature that allows you to break your Terraform state into separate configurations.
-* This allows you to manage multiple environments, each with their own unique portion of the state file.
-
-![image](image/TF-env1.png)
-
-**Pros:**
-
-* Easy to get started with.
-* Minimizes code duplication between environments.
-* Convenient as you can reference terraform.workspace as an expression within your Terraform files to populate names of resources.
-
-**Cons:**
-
-* Can be dangerous if you accidentally apply changes to the wrong environment.
-* State files are stored within the same remote back end, making permissioning and access challenging.
-* Cannot easily determine the deployed state by simply looking at the codebase.
-
-#### **Separate Subdirectories**
-
-The alternative to using workspaces, is to define separate environments as separate directories within the filesystem. You have one directory (and its children) for each environment you plan to deploy.
-
-![image](image/TF-env2.png)
-
-**Pros:**
-
-* Isolates back ends, allowing for separate back-end configurations and improved security.
-* Decreases potential for human error as environments are managed separately.
-* The codebase fully represents the deployed state, making it easier to understand.
-
-**Cons:**
-
-* Requires navigating between subdirectories to apply changes to each environment.
-* More code duplication as each **main.tf** file represents a similar configuration.
-
-### **Using Terraform Workspaces**
-
-**Defining the Root Module**
-
-**1.** Create a new directory called workspace. This directory will contain the **main.tf** file for the Terraform workspace implementation.
-
-**2.** Inside the **main.tf** file, set up the backend and providers.
-
-```markdown
-terraform {
-  # Assumes s3 bucket and dynamo DB table already set up
-  backend "s3" {
-    bucket         = "devops-directive-tf-state-config"
-    key            = "managing-multiple-environments/workspaces/terraform.tfstate"
-    region         = "us-east-1"
-    dynamodb_table = "terraform-state-locking"
-    encrypt        = true
-  }
-
-  required_providers {
-    aws = {
-      source  = "hashicorp/aws"
-      version = "~> 3.0"
-    }
-  }
-}
-```
-
-**3.** Add a variable for the sensitive password value.
-
-```markdown
-variable "db_pass" {
-  description = "password for database"
-  type        = string
-  sensitive   = true
-}
-```
-
-**4.** Make use of the workspace's name for postfixing certain resources, such as the S3 bucket, to avoid naming conflicts.
-
-```markdown
-locals {
-  environment_name = terraform.workspace
-}
-
-resource "aws_s3_bucket" "bucket" {
-  bucket = "web-app-data-${local.environment_name}"
-}
-```
-
-**5.** Populate all the input variables for the module so it knows how to provision the environment.
-
-```markdown
-module "web_app" {
-  source = "../../organization-and-modules/web-app-module"
-
-  # Input Variables
-  bucket_prefix    = "web-app-data-${local.environment_name}"
-  domain           = "devopsdeployed.com"
-  environment_name = local.environment_name
-  instance_type    = "t2.micro"
-  create_dns_zone  = terraform.workspace == "production" ? true : false
-  db_name          = "${local.environment_name}mydb"
-  db_user          = "foo"
-  db_pass          = var.db_pass
-}
-```
-
-**6.** Use conditionals to determine whether to provision the DNS zone or use an existing one based on the environment (production or staging).
-
-```markdown
-create_dns_zone  = terraform.workspace == "production" ? true : false
-```
-
-**Creating Production and Staging Environments**
-
-**1.** Initialize Terraform using `terraform init`.
-
-**2.** Create a new environment called "production" using the command `terraform workspace new production`. To verify the creation, use `terraform workspace list`.
-
-**3.** Deploy the environment using `terraform apply`. Pass the sensitive database password during runtime.
-
-**4.** Once the production environment is created, create another environment called "staging" using `terraform workspace new staging`.
-
-**5.** Deploy the staging environment using `terraform apply`. Pass the sensitive database password during runtime.
-
-**6.** As a result, two copies of the web application will be running, one at  production and the other at staging.
-
-**Cleanup**
-
-**1.** To avoid incurring additional costs by leaving the infrastructure running, you can destroy destroy both environments using the terraform destroy command.
-
-**2.** You will need ot switch to each environment using the `terraform workspace select WORKSPACE_NAME` followed by `terraform destroy`
-
-**3.** In this chapter, we demonstrated how to use Terraform Workspaces to manage multiple environments for our sample web application.
-
-**4.** We created two environments, production and staging, and deployed the web application to both environments, all from the same codebase.
-
-### **Using Subdirectory Environments**
-
-We will create two environments, production and staging, and deploy the web application to both environments using a directory layout approach.
-
-**Refactoring the Codebase**
-
-**1.** Create a three new subdirectories: **global**, **production**, and **staging**.
-
-**2.** The **global** directory will contain resources shared across multiple environments, such as the Route 53 Zone. Add a **main.tf** file in the **global** directory with the Terraform block and the resource for the Route 53 Zone.
-
-```markdown
-# Route53 zone is shared across staging and production
-resource "aws_route53_zone" "primary" {
-  name = "MY_DOMAIN.com"
-}
-```
-
-**3.** In both the production and staging directories, create a main.tf file defining the options for the module being deployed.
-
-These files will be similar to the previous examples, but set the create_dns_zone variable to false since the DNS zone is managed in the global directory.
-
-**Deploying the Environments**
-
-**1.** Navigate to the **global** directory, initialize Terraform using `terraform init`, and apply the configuration using `terraform apply`. This step will create the shared Route 53 Zone.
-
-**2.** Navigate to the **production** directory, initialize Terraform using `terraform init`, and apply the configuration using `terraform apply`. This will deploy the production environment.
-
-**3.** Navigate to the **staging** directory, initialize Terraform using `terraform init`, and apply the configuration using `terraform apply`. This will deploy the staging environment.
-
-**Advantages and Disadvantages of the Subdirectories Approach**
-
-**Advantages:**
-
-* Clear organization of environments in the file structure.
-* Easier to reason about the actual infrastructure deployed.
-
-**Disadvantages:**
-
-* More code repetition, as each environment has its own main.tf file.
-* Some limitations in templating the backend provider, leading to hardcoding values.
 
 ## **Create EKS Cluster Using Terraform**
-
-Refere the [link](https://github.com/PadmanabhanSaravanan/Terraform/tree/Terraform-v1/eks) for the example
 
 **Step 1** : Create AWS VPC using Terraform
 
@@ -2531,71 +2759,8 @@ kubectl apply -f cluster-autoscaler.yaml
 kubectl get pods -n kube-system
 ```
 
-
-## **Testing Terraform Code**
-
-The importance of testing your Terraform code to ensure that your infrastructure-as-code configurations maintain high quality and continue to perform as expected.
-
-**Code Rot**
-
-Code rot refers to the gradual degradation of a codebase over time due to external dependencies changing, other changes in the codebase impacting specific functions, or unapplied changes. In the context of Terraform and infrastructure, code rot may occur due to:
-
-* Out-of-band changes.
-* Unpinned versions of providers.
-* Deprecated external modules or resource types.
-* Unapplied changes to Terraform configurations.
-
-**Preventing Code Rot with Testing**
-
-To prevent code rot, we can perform various types of tests on our Terraform code:
-
-1. **Static checks**: Run built-in Terraform commands like `terraform fmt`, `terraform validate`, and `terraform plan` to check the formatting, validate configurations, and compare the desired state with the actual state, respectively. Use custom validation rules to further validate your infrastructure configurations.
-
-2. **Third-party tools**: Use tools like **tflint**, **checkov**, **tfsec**, and **terrascan** to perform additional checks on your codebase. Terraform Sentinel, available only for enterprise customers, provides security and compliance guarantees.
-
-3. **Manual testing**: Follow the standard Terraform workflow, running `terraform init`, `terraform apply`, and `terraform destroy` to test your configuration manually.
-
-4. **Automated testing**: Automate the manual testing steps using a shell script or a more robust method, such as utilizing a testing framework like TerraTest with Go to write complex tests and make assertions about your infrastructure.
-
-**Static Checks**
-
-These checks are not tests, but they are useful for analyzing the codebase.
-
-**1.** **terraform fmt**: Formats your code according to Terraform's opinionated formatting structure. This can be used in continuous integration to enforce a consistent style guide.
-
-![format](image/fmt.PNG)
-
-* `terraform fmt --check` command is used to check the formatting structure
-* `terraform fmt` is used to formats your code according to Terraform's opinionated formatting structure
-
-**2.** **terraform validate**: Checks if your code is a valid Terraform configuration.
-
-![validate](image/validate.PNG)
-
-* **Custom validation rules**: Use the variable block to enforce certain conditions for variables. For example, enforce a minimum length for a password.
-* **Third-party tools**: Use third-party tools to scan Terraform configurations for correctness, security, and compliance.
-
-## **Developer Workflows**
-
-**Workflow for Terraform Developers**
-
-1. Write and update Terraform code.
-
-2. Test the changes locally in a development environment.
-
-3. Create a pull request (PR) in a version control system (e.g., GitHub).
-
-4. Have a colleague review the PR and suggest improvements.
-
-5. Run tests within a continuous integration (CI) system (e.g., GitHub Actions).
-
-6. If tests pass, merge the PR into the main branch.
-
-7. Use an automated pipeline in the CI/CD tool to deploy the changes to the staging environment.
-
-8. Deploy the changes to production when tagging a new release.
-
 ## **References**
 
 * https://courses.devopsdirective.com/terraform-beginner-to-pro/lessons/00-introduction/01-main
 * https://developer.hashicorp.com/terraform/docs
+* https://www.youtube.com/watch?v=7xngnjfIlK4&t=8778s
