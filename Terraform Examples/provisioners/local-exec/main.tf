@@ -23,6 +23,10 @@ resource "aws_instance" "my_vm" {
         command = "echo ${self.private_ip} >> private_ip.txt"
     }
 
+    tags = {
+        Name = "ExampleAppServerInstance"
+    }
+
 }
 
 # variables.tf
