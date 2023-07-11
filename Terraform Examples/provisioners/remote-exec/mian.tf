@@ -34,6 +34,10 @@ resource "aws_instance" "my_vm" {
         private_key = file("aws_key.pem")
         timeout     = "4m"
         }
+
+   tags = {
+    Name = "ExampleAppServerInstance"
+  }
 }
 
 resource "aws_security_group" "webSG" {
